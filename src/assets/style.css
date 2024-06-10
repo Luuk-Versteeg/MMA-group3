@@ -1,0 +1,13 @@
+body {
+    margin: 0;
+}
+
+#carousel {
+    display: flex;
+}
+
+#carousel > div > div {
+    /* display: block; */
+    width: calc(100vw - 80px);
+    margin: 0px 40px;
+}
