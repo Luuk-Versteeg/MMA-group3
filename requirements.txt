@@ -11,3 +11,4 @@ umap-learn
 scikit-learn
 wget
 dash-holoniq-wordcloud
+pyarrow

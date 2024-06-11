@@ -3,15 +3,21 @@ import plotly.express as px
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
+from dataloaders.load_data import datasets
 
 app = Dash(__name__)
 
+df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
+
+
+# import pdb; pdb.set_trace()
+
 app.layout = dbc.Container([
     html.Div(children=[
-        html.H1(children='First page', style={'textAlign':'center'}),
-        dcc.Dropdown(df.country.unique(), 'Canada', id='dropdown-selection1'),
-        dcc.Graph(id='graph-content1')
+        html.H1(children='Data selection', style={'textAlign':'center'}),
+        dcc.Dropdown([d["name"] for d in datasets], value=datasets[0]["name"], id='dropdown-selection1'),
+        html.Div(id="details"),
+        # dcc.Graph(id='graph-content1')
     ]),
     html.Div(children=[
         html.H1(children='Second page', style={'textAlign':'center'}),
@@ -26,12 +32,12 @@ app.layout = dbc.Container([
 ], id="carousel")
 
 @callback(
-    Output('graph-content1', 'figure'),
+    Output('details', 'children'),
     Input('dropdown-selection1', 'value')
 )
 def update_graph(value):
-    dff = df[df.country==value]
-    return px.line(dff, x='year', y='pop')
+    dataset = [d for d in datasets if d["name"] == value][0]
+    return [html.P(children=f'Description: {dataset["description"]}'), html.P(children=f'Scheme: {dataset["scheme"]}')]
 
 @callback(
     Output('graph-content2', 'figure'),
