@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc, Output, Input, State, ctx, callback
+from dash import Dash, html, dcc, Output, Input, State, ctx, callback, dependencies
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -9,7 +9,7 @@ df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapmi
 
 app = Dash(__name__)
 
-all_variants = defaultdict(dict)
+#all_variants = defaultdict(dict)
 
 app.layout = dbc.Container([
     html.Div(children=[
@@ -82,13 +82,8 @@ app.layout = dbc.Container([
                                'height':50}
                     ),
                     html.Div(id='variant-container', children=[
-                        # dcc.Input(
-                        #     id='input-test2',
-                        #     value='variant',
-                        #     type='text',
-                        #     style={'width':'100%', 'height': 35},
-                        # )
                     ]),
+                    dcc.Store(id='variant-local-store', data=defaultdict(dict))
                 ],
                 style={'width':'47%', 'height':400, 'display':'inline-block'},
             )
@@ -117,15 +112,17 @@ def update_graph(value):
     dff = df[df.country==value]
     return px.line(dff, x='year', y='pop')
 
+
 @callback(
     Output('variable-container', 'children'),
     Output('variable-container', 'value'),
     Input('add-variable-button', 'n_clicks'),
     Input('remove-variable-button', 'n_clicks'),
     State('variable-container', 'children'),
-    State('variable-container', 'value')
+    State('variable-container', 'value'),
+    State('variant-local-store','data')
 )
-def update_tabs(add_clicks, remove_clicks, tabs, active_tab):
+def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     ctx_id = ctx.triggered_id
 
     if ctx_id == 'add-variable-button':
@@ -140,8 +137,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab):
 
     elif ctx_id == 'remove-variable-button' and active_tab is not None:
         if active_tab in all_variants:
-            #all_variants.pop(active_tab, None)
-            all_variants[active_tab] = {}
+            all_variants.pop(active_tab, None)
+            #all_variants[active_tab] = {}
 
         tabs = [tab for tab in tabs if tab['props']['value'] != active_tab]
         if tabs:
@@ -154,33 +151,41 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab):
 
 @callback(
     Output('variant-container', 'children'),
+    Output('variant-local-store', 'data', allow_duplicate=True),
     Input('add-variant-button', 'n_clicks'),
     Input('variable-container', 'value'),
     State('variant-container', 'children'),
-    State('variable-container', 'value')
+    State('variable-container', 'value'),
+    State('variant-local-store', 'data',),
+    prevent_initial_call=True
 )
-def update_variants(add_clicks, pressed_tab, variants, tabs_state):
+def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants):
     ctx_id = ctx.triggered_id
 
+    # Add variants.
     if ctx_id == 'add-variant-button':
         if tabs_state == None:
             return variants
 
         idx = len(variants) + 1
+
+        if tabs_state not in all_variants:
+            all_variants[tabs_state] = {}
         all_variants[tabs_state][idx] = f"Variant {idx}"
 
+
         new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
-            dcc.Input(id='input-variant-' + str(idx),
+            dcc.Input(id={'type': 'variant-input', 'index': idx},
                     value=all_variants[tabs_state][idx],
                     type='text'),
             html.Button('X', id='button-delete'),
         ])
         variants.append(new_variant)
-
+    # Add variables.
     elif ctx_id == 'variable-container':
         if pressed_tab in all_variants:
             vars = [html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
-                dcc.Input(id='input-variant-' + str(idx),
+                dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
                         value=val,
                         type='text'),
                 html.Button('X', id='button-delete'),
@@ -190,7 +195,22 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state):
         else:
             variants = []
 
-    return variants
+
+    return variants, all_variants
+
+@callback(
+    Output('variant-local-store','data'),
+    [Input({'type': 'variant-input', 'index': dependencies.ALL}, 'value')],
+    State('variable-container', 'value'),
+    State('variant-local-store','data')
+)
+def update_variant_dict(values, selected_tab, all_variants):
+    ctx_id = ctx.triggered_id
+    if not ctx_id:
+        return all_variants
+    all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
+    return all_variants
+    
 
 
 @callback(
