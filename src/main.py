@@ -3,13 +3,11 @@ import plotly.express as px
 import dash_bootstrap_components as dbc
 import pandas as pd
 from collections import defaultdict
-
+import itertools
 
 df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
 
 app = Dash(__name__)
-
-#all_variants = defaultdict(dict)
 
 app.layout = dbc.Container([
     html.Div(children=[
@@ -38,8 +36,8 @@ app.layout = dbc.Container([
         ),
         html.Div(children=[
                 dcc.Textarea(
-                    id='textarea-example',
-                    value='{q2}{text}\n\n{q1}',
+                    id='textarea-prompt',
+                    value='{var1}{text}\n\n{var2}',
                     style={'width':'58%', 'height':50, 'display':'inline-block', 
                         'resize':'vertical'},
                 ),
@@ -83,7 +81,7 @@ app.layout = dbc.Container([
                     ),
                     html.Div(id='variant-container', children=[
                     ]),
-                    dcc.Store(id='variant-local-store', data=defaultdict(dict))
+                    dcc.Store(id='variant-store', data=defaultdict(dict))
                 ],
                 style={'width':'47%', 'height':400, 'display':'inline-block'},
             )
@@ -91,11 +89,14 @@ app.layout = dbc.Container([
             style={'display':'flex', 'justify-content':'space-between'}
         ),
         html.Div(children=[
-                html.Button('Generate prompts', id='button-generate'),
-                html.Button('Test prompts', id='button-test')
+                html.Button('Generate prompts', id='button-generate-prompts'),
+                html.Button('Test prompts', id='button-test-prompts')
             ], 
             style={'width':'100%'}
         ),
+        html.Div(id='generated-prompts-container', children=[
+            html.Div(children='{var1}{text}\n\n{var2}')
+        ], style={'width':'100%'})
     ]),
     html.Div(children=[
         html.H1(children='Third page', style={'textAlign':'center'}),
@@ -103,6 +104,7 @@ app.layout = dbc.Container([
         dcc.Graph(id='graph-content3')
     ])
 ], id="carousel")
+
 
 @callback(
     Output('graph-content1', 'figure'),
@@ -120,14 +122,14 @@ def update_graph(value):
     Input('remove-variable-button', 'n_clicks'),
     State('variable-container', 'children'),
     State('variable-container', 'value'),
-    State('variant-local-store','data')
+    State('variant-store','data')
 )
 def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     ctx_id = ctx.triggered_id
 
     if ctx_id == 'add-variable-button':
         new_index = len(tabs) + 1 
-        new_tab_value = f'tab-{new_index}'
+        new_tab_value = f'{new_index}'
         new_tab = dcc.Tab(label=f'Variable {new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
                           style={'width':'100%', 'line-width': '100%'},
@@ -138,7 +140,6 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     elif ctx_id == 'remove-variable-button' and active_tab is not None:
         if active_tab in all_variants:
             all_variants.pop(active_tab, None)
-            #all_variants[active_tab] = {}
 
         tabs = [tab for tab in tabs if tab['props']['value'] != active_tab]
         if tabs:
@@ -151,12 +152,12 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
 
 @callback(
     Output('variant-container', 'children'),
-    Output('variant-local-store', 'data', allow_duplicate=True),
+    Output('variant-store', 'data', allow_duplicate=True),
     Input('add-variant-button', 'n_clicks'),
     Input('variable-container', 'value'),
     State('variant-container', 'children'),
     State('variable-container', 'value'),
-    State('variant-local-store', 'data',),
+    State('variant-store', 'data',),
     prevent_initial_call=True
 )
 def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants):
@@ -198,11 +199,12 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
 
     return variants, all_variants
 
+
 @callback(
-    Output('variant-local-store','data'),
+    Output('variant-store','data'),
     [Input({'type': 'variant-input', 'index': dependencies.ALL}, 'value')],
     State('variable-container', 'value'),
-    State('variant-local-store','data')
+    State('variant-store','data')
 )
 def update_variant_dict(values, selected_tab, all_variants):
     ctx_id = ctx.triggered_id
@@ -211,6 +213,56 @@ def update_variant_dict(values, selected_tab, all_variants):
     all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
     return all_variants
     
+
+@callback(
+    Output('generated-prompts-container', 'children'),
+    Input('button-generate-prompts', 'n_clicks'),
+    State('variant-store', 'data'),
+    State('textarea-prompt', 'value'),
+)
+def generate_prompts(generate_clicks, data, prompt):
+    ctx_id = ctx.triggered_id
+    if not ctx_id:
+        return []
+
+    vars = []
+    for var_num, variants in data.items():
+        vars.append([(var_num, var) for var in list(variants.values())])
+    permurations = list(itertools.product(*vars))
+
+    generated_prompts = []
+    print("=======")
+    for perm in permurations:
+        new_prompt = prompt
+        for variable in perm:
+            new_prompt = new_prompt.replace('{var' + variable[0] + '}', variable[1])
+
+        # Convert to list of lines with html.Br() instead of \n.
+        prompt_lines = []
+        for line in new_prompt.split('\n'):
+            prompt_lines.append(line)
+            prompt_lines.append(html.Br())
+        prompt_lines = prompt_lines[:-1]
+
+        generated_prompts.append(html.Div(children=prompt_lines, style={'border':'2px solid #000', 'height':200, 'width':200, 'display':'inline-block'}))
+# return (html.P(["Model:{}".format(m),html.Br(),
+#                 "Prediction:{}".format(y_pred[i]),
+#                 html.Br(),"Probability for Yes:{}".format(yes),
+#                 html.Br(),"Probability for No:{}".format(no)]))
+    # for var_num, variants in data.items():
+    #     new_prompt = prompt.replace("{var" + var_num + "}", list(variants.values())[0])
+
+    # for var_num, variants in data.items():
+
+    #     print("=========")
+    #     print("var" + var_num)
+    #     for variant in variants.values():
+    #         print("----------")
+    #         print("lol" + variant)
+    #         new_prompt = prompt.replace("{var" + var_num + "}", variant)
+    #         #print(var_num, variant)
+    #         print(new_prompt)    
+    return generated_prompts
 
 
 @callback(

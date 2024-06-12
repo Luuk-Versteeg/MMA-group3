@@ -14,7 +14,6 @@ body {
 
 .box {
     border: 2px solid #000; /* Add a solid border around the box */
-    background-color: #f0f0f0; /* Set a background color for the box */
     color: #333; /* Set the text color */
     font-size: 16px; /* Set the font size */
     box-sizing: border-box; /* Include padding and border in the element's total width and height */
