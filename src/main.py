@@ -131,8 +131,17 @@ def update_graph(value):
 def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     ctx_id = ctx.triggered_id
 
+    print("BRUH")
     if ctx_id == 'add-variable-button':
+        possible_indices = [tab['props']['id']['index'] for tab in tabs]
         new_index = len(tabs) + 1 
+        i = 1
+        while True:
+            if i not in possible_indices:
+                new_index = i
+                break
+            i += 1
+
         new_tab_value = f'{new_index}'
         new_tab = dcc.Tab(label=f'Variable {new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
