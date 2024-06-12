@@ -131,7 +131,6 @@ def update_graph(value):
 def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     ctx_id = ctx.triggered_id
 
-    print("BRUH")
     if ctx_id == 'add-variable-button':
         possible_indices = [tab['props']['id']['index'] for tab in tabs]
         new_index = len(tabs) + 1 
@@ -143,7 +142,7 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
             i += 1
 
         new_tab_value = f'{new_index}'
-        new_tab = dcc.Tab(label=f'Variable {new_index}', value=new_tab_value, 
+        new_tab = dcc.Tab(label=f'var{new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
                           style={'width':'100%', 'line-width': '100%'},
                           selected_style={'width':'100%', 'line-width': '100%'})
@@ -151,9 +150,6 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
         active_tab = new_tab_value
 
     elif ctx_id == 'remove-variable-button' and active_tab is not None:
-        # if active_tab in all_variants:
-        #     all_variants.pop(active_tab, None)
-
         tabs = [tab for tab in tabs if tab['props']['value'] != active_tab]
         if tabs:
             active_tab = tabs[0]['props']['value']
