@@ -90,12 +90,16 @@ app.layout = dbc.Container([
         ),
         html.Div(children=[
                 html.Button('Generate prompts', id='button-generate-prompts'),
-                html.Button('Test prompts', id='button-test-prompts')
+                html.Button('Test prompts', id='button-test-prompts'),
+                'Select number of samples',
+                html.Div(children=dcc.Dropdown([10, 20, 50], 10, id='select-num-samples'))
             ], 
             style={'width':'100%'}
         ),
         html.Div(id='generated-prompts-container', children=[
-            html.Div(children='{var1}{text}\n\n{var2}')
+        ], style={'width':'100%'}),
+        html.Div(id='tested-prompts-container', children=[
+            html.Div(children='test prompt')
         ], style={'width':'100%'})
     ]),
     html.Div(children=[
@@ -218,7 +222,6 @@ def update_variant_dict(values, removes, selected_tab, all_variants):
     else:
         all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
 
-    print("AAA", all_variants)
     return all_variants
     
 
@@ -239,8 +242,7 @@ def generate_prompts(generate_clicks, data, prompt):
     permurations = list(itertools.product(*vars))
 
     generated_prompts = []
-    print("=======")
-    for perm in permurations:
+    for idx, perm in enumerate(permurations, start=1):
         new_prompt = prompt
         for variable in perm:
             new_prompt = new_prompt.replace('{var' + variable[0] + '}', variable[1])
@@ -252,25 +254,20 @@ def generate_prompts(generate_clicks, data, prompt):
             prompt_lines.append(html.Br())
         prompt_lines = prompt_lines[:-1]
 
-        generated_prompts.append(html.Div(children=prompt_lines, style={'border':'2px solid #000', 'height':200, 'width':200, 'display':'inline-block'}))
-# return (html.P(["Model:{}".format(m),html.Br(),
-#                 "Prediction:{}".format(y_pred[i]),
-#                 html.Br(),"Probability for Yes:{}".format(yes),
-#                 html.Br(),"Probability for No:{}".format(no)]))
-    # for var_num, variants in data.items():
-    #     new_prompt = prompt.replace("{var" + var_num + "}", list(variants.values())[0])
+        generated_prompts.append(html.Div(id={'type': 'generated-prompt', 'index': int(idx)}, children=prompt_lines, style={'border':'2px solid #000', 'height':200, 'width':200, 'display':'inline-block'}))
 
-    # for var_num, variants in data.items():
-
-    #     print("=========")
-    #     print("var" + var_num)
-    #     for variant in variants.values():
-    #         print("----------")
-    #         print("lol" + variant)
-    #         new_prompt = prompt.replace("{var" + var_num + "}", variant)
-    #         #print(var_num, variant)
-    #         print(new_prompt)    
     return generated_prompts
+
+
+@callback(
+    Output('tested-prompts-container', 'children'),
+    Input('button-test-prompts', 'n_clicks'),
+    State('select-num-samples', 'value'),
+    State('generated-prompts-container', 'children')
+    #State({'type': 'generated-prompt', 'index': dependencies.ALL}, 'children')
+)
+def test_prompts(test_button, num_samples, generated_prompts):
+    return []
 
 
 @callback(
