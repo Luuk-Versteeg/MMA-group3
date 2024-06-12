@@ -138,8 +138,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
         active_tab = new_tab_value
 
     elif ctx_id == 'remove-variable-button' and active_tab is not None:
-        if active_tab in all_variants:
-            all_variants.pop(active_tab, None)
+        # if active_tab in all_variants:
+        #     all_variants.pop(active_tab, None)
 
         tabs = [tab for tab in tabs if tab['props']['value'] != active_tab]
         if tabs:
@@ -202,15 +202,23 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
 
 @callback(
     Output('variant-store','data'),
-    [Input({'type': 'variant-input', 'index': dependencies.ALL}, 'value')],
+    Input({'type': 'variant-input', 'index': dependencies.ALL}, 'value'),
+    Input('remove-variable-button', 'n_clicks'),
     State('variable-container', 'value'),
     State('variant-store','data')
 )
-def update_variant_dict(values, selected_tab, all_variants):
+def update_variant_dict(values, removes, selected_tab, all_variants):
     ctx_id = ctx.triggered_id
     if not ctx_id:
         return all_variants
-    all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
+    
+    if ctx_id == 'remove-variable-button':
+        #all_variants[selected_tab] = {}
+        all_variants.pop(selected_tab, None)
+    else:
+        all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
+
+    print("AAA", all_variants)
     return all_variants
     
 
