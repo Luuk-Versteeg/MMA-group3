@@ -4,7 +4,7 @@ from dash import html, dcc
 # from src_template.Dataset import Dataset
 
 
-def create_histogram(selected_data=None):
+def create_histogram(selected_data=None, id="histogram"):
     histogram = draw_histogram(selected_data)
     return html.Div([
         dcc.Graph(figure=histogram,
@@ -13,9 +13,9 @@ def create_histogram(selected_data=None):
                       'displaylogo': False,
                       'displayModeBar': False
                   },
-                  id='histogram',
+                  id=id,
                   clear_on_unhover=True),
-        dcc.Tooltip(id="histogram-tooltip",
+        dcc.Tooltip(id=f"histogram-tooltip-{id}",
                     loading_text="LOADING"),
     ], className='border-widget stretchy-widget histogram-container')
 
