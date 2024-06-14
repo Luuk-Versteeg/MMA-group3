@@ -42,7 +42,7 @@ app.layout = dbc.Container([
                         'resize':'vertical'},
                 ),
                 dcc.Input(
-                    id='input-test1',
+                    id='possible-answers',
                     value='Business, World, Science, Sports',
                     type='text',
                     style={'width':'38%', 'height': 50, 'display': 'inline-block'},
@@ -268,10 +268,11 @@ def generate_prompts(generate_clicks, data, prompt):
     Output('tested-prompts-container', 'children'),
     Input('button-test-prompts', 'n_clicks'),
     State('select-num-samples', 'value'),
-    State('generated-prompts-container', 'children')
+    State('generated-prompts-container', 'children'),
+    State('possible-answers', 'value')
     #State({'type': 'generated-prompt', 'index': dependencies.ALL}, 'children')
 )
-def test_prompts(test_button, num_samples, generated_prompts):
+def test_prompts(test_button, num_samples, generated_prompts, possible_answers):
     return []
 
 
