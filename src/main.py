@@ -56,13 +56,13 @@ app.layout = dbc.Container([
         ), style={"marginTop": "30px", "marginBottom": "30px"})
     ]),
     html.Div(children=[
-        html.H1(children='Second page', style={'textAlign':'center'}),
+        html.H1(children='Prompt Engineering', style={'textAlign':'center'}),
         html.Div(children=[
             html.Div(
                 className='box',
                 children=[
                     html.Button('<', id='button-left', style={'height':'100%', 'width':50, 'display':'inline-block'}),
-                    html.Div(style={'height':'100%', 'flex':1, 'text-align':'center'}, children='Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'),
+                    html.Div(id="prompt-sample", style={'height':'100%', 'flex':1, 'text-align':'center'}),
                     html.Button('>', id='button-right', style={'height':'100%', 'width':50, 'display':'inline-block'})
                 ],
                 style={'width':'50%', 'height':100, 'display':'flex'},
@@ -143,9 +143,40 @@ app.layout = dbc.Container([
         ], style={'width':'100%'})
     ]),
     html.Div(children=[
-        html.H1(children='Third page', style={'textAlign':'center'}),
-        dcc.Dropdown(df.country.unique(), 'Spain', id='dropdown-selection3'),
-        dcc.Graph(id='graph-content3')
+        html.H1(children='Evaluation', style={'textAlign':'center'}),
+        html.Button('Run prompts', id='run-all-prompts-btn'),
+        html.Div(children=dash_ag_grid.AgGrid(
+            columnDefs=[],
+            rowData=[],
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={
+                "pagination": False,
+                "paginationAutoPageSize": True,
+                "suppressCellFocus": True,
+                "rowSelection": "single",
+            },
+            selectedRows=[],
+            # defaultColDef={"filter": "agTextColumnFilter"},
+            # className='stretchy-widget ag-theme-alpine',
+            # style={'width': '', 'height': ''},
+            id='evaluation-table'
+        ), style={"marginTop": "30px", "marginBottom": "30px"}),
+        html.Div(children=dash_ag_grid.AgGrid(
+            columnDefs=[],
+            rowData=[],
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={
+                "pagination": False,
+                "paginationAutoPageSize": True,
+                "suppressCellFocus": True,
+                "rowSelection": "single",
+            },
+            selectedRows=[],
+            # defaultColDef={"filter": "agTextColumnFilter"},
+            # className='stretchy-widget ag-theme-alpine',
+            # style={'width': '', 'height': ''},
+            id='confusion-matrix'
+        ), style={"marginTop": "30px", "marginBottom": "30px", "width": "500px"})
     ])
 ], id="carousel")
 
@@ -158,6 +189,37 @@ def select_dataset(name, datasets=datasets):
         raise KeyError(f"There's no dataset called: {name}")
     
     return dataset[0]
+
+
+@callback(
+    Output("evaluation-table", "rowData"),
+    Output("evaluation-table", "columnDefs"),
+    Input("dataset-selection", "value"),
+    Input("dataset-split", "value"),
+    Input("run-all-prompts-btn", "value")
+)
+def update_evaluation_table(dataset_name, dataset_split, button_clicked):
+    return [], []
+
+
+@callback(
+    Output("confusion-matrix", "rowData"),
+    Output("confusion-matrix", "columnDefs"),
+    Input("evaluation-table", "rowData"),
+    Input("generated-prompts-container", "children"),
+    Input("run-all-prompts-btn", "value")
+
+)
+def update_confusion_matrix(data, prompts, button_clicked):
+    return [], []
+
+
+@callback(
+    Output("prompt-sample", "children"),
+    Input("samples-table", "selectedRows")
+)
+def update_prompt_sample(selected_rows):
+    return 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
 
 
 @callback(
@@ -456,23 +518,6 @@ def update_label_histogram(dataset_name, dataset_split):
     )
 
     return fig
-
-
-# @callback(
-#     Output('graph-content2', 'figure'),
-#     Input('dropdown-selection2', 'value')
-# )
-# def update_graph(value):
-#     dff = df[df.country==value]
-#     return px.line(dff, x='year', y='pop')
-
-@callback(
-    Output('graph-content3', 'figure'),
-    Input('dropdown-selection3', 'value')
-)
-def update_graph(value):
-    dff = df[df.country==value]
-    return px.line(dff, x='year', y='pop')
 
 
 if __name__ == '__main__':
