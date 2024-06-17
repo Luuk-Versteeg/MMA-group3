@@ -12,3 +12,4 @@ scikit-learn
 wget
 dash-holoniq-wordcloud
 pyarrow
+nltk
