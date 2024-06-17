@@ -1,7 +1,7 @@
-plotly==5.20.0
-dash==2.16.1
-git+https://github.com/openai/CLIP.git
-dash-bootstrap-components
+dash
+dash_bootstrap_components
+dash_ag_grid
+plotly
 pandas
 dash-ag-grid
 wordcloud
@@ -12,3 +12,4 @@ scikit-learn
 wget
 dash-holoniq-wordcloud
 pyarrow
+nltk
