@@ -18,6 +18,9 @@ from collections import Counter
 from widgets import histogram
 from dataloaders.load_data import datasets
 
+nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
+
 
 data_selection = html.Div(children=[
     html.H1(children='Data selection', style={'textAlign':'center'}),
