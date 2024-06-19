@@ -12,3 +12,8 @@ scikit-learn
 wget
 dash-holoniq-wordcloud
 pyarrow
+torch
+accelerate
+transformers
+datasets
+scikit-learn

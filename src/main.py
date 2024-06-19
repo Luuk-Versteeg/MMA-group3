@@ -18,6 +18,9 @@ from collections import Counter
 from widgets import histogram
 from dataloaders.load_data import datasets
 
+from pages import evaluation
+from pages.data_selection import amazon_dataset
+import plotly.figure_factory as ff
 
 nltk.download('stopwords')
 stop_words = set(stopwords.words('english'))
@@ -168,27 +171,14 @@ app.layout = dbc.Container([
                 "rowSelection": "single",
             },
             selectedRows=[],
-            # defaultColDef={"filter": "agTextColumnFilter"},
-            # className='stretchy-widget ag-theme-alpine',
-            # style={'width': '', 'height': ''},
             id='evaluation-table'
         ), style={"marginTop": "30px", "marginBottom": "30px"}),
-        html.Div(children=dash_ag_grid.AgGrid(
-            columnDefs=[],
-            rowData=[],
-            columnSize="responsiveSizeToFit",
-            dashGridOptions={
-                "pagination": False,
-                "paginationAutoPageSize": True,
-                "suppressCellFocus": True,
-                "rowSelection": "single",
-            },
-            selectedRows=[],
-            # defaultColDef={"filter": "agTextColumnFilter"},
-            # className='stretchy-widget ag-theme-alpine',
-            # style={'width': '', 'height': ''},
-            id='confusion-matrix'
-        ), style={"marginTop": "30px", "marginBottom": "30px", "width": "500px"})
+        html.Div(id="confusion-matrix-container", 
+                 children=dcc.Graph(
+                     id="confusion-matrix",
+                     figure = {},
+                 )
+                 , style={"marginTop": "30px", "marginBottom": "30px", "width": "500px"})
     ])
 ], id="carousel")
 
@@ -215,16 +205,37 @@ def update_evaluation_table(dataset_name, dataset_split, button_clicked):
 
 
 @callback(
-    Output("confusion-matrix", "rowData"),
-    Output("confusion-matrix", "columnDefs"),
+    Output("confusion-matrix", "figure"),
     Input("evaluation-table", "rowData"),
     Input("generated-prompts-container", "children"),
-    Input("run-all-prompts-btn", "value")
-
+    Input("run-all-prompts-btn", "n_clicks")
 )
-def update_confusion_matrix(data, prompts, button_clicked):
-    return [], []
+def update_confusion_matrix(data, prompts, n_clicked):
+    if not n_clicked:
+        return ff.create_annotated_heatmap([[0,0],[0,0]])
+    
+    # SENTENCE will be replaced with the sentence.
+    prompt = """
+    Given this sentence: "SENTENCE"
 
+    Would you say this sentence is positive or negative?
+    """
+    n_samples = 5
+    data = amazon_dataset
+    predicted_labels, true_labels = evaluation.sent_classifier(prompt, data, n_samples)
+    confusion_matrix = evaluation.make_confusion_matrix(predicted_labels, true_labels)
+
+    labels = []
+    if -1 in predicted_labels or -1 in true_labels:
+        labels.append("unknown")
+    if 0 in predicted_labels or 0 in true_labels:
+        labels.append("negative")
+    if 1 in predicted_labels or 1 in true_labels:
+        labels.append("positive")
+    
+    fig = ff.create_annotated_heatmap(confusion_matrix, x=labels, y=labels)
+    fig.update_layout(width=500, height=500)
+    return fig
 
 @callback(
     Output("prompt-sample", "children"),
