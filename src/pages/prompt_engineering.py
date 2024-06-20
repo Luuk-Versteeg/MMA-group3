@@ -266,7 +266,7 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
 @callback(
     Output("samples-table", "selectedRows", allow_duplicate=True),
     Output("prompt-sample", "children", allow_duplicate=True),
-    Output("prompt-labels", "children", allow_duplicate=True),
+    #Output("prompt-labels", "children", allow_duplicate=True),
     Input("button-left", "n_clicks"),
     Input("button-right", "n_clicks"),
     Input("samples-table", "selectedRows"),
@@ -282,7 +282,7 @@ def change_sample(left_clicks, right_clicks, selected_rows, row_data, dataset_na
             if entry == selected_rows[0]:
                 row_index = i
     else:
-        return selected_rows, [], []
+        return selected_rows, []
 
     ctx_id = ctx.triggered_id
     if ctx_id == 'button-left':
@@ -299,7 +299,5 @@ def change_sample(left_clicks, right_clicks, selected_rows, row_data, dataset_na
         output.append(html.P(new_selected[0]['content']))
     elif 'Description' in new_selected[0].keys():
         output.append(html.P(new_selected[0]['Description']))
-    dataset = select_dataset(dataset_name)
-    labels = 'labels: ' + dataset['scheme']
     
-    return new_selected, output, labels
+    return new_selected, output
