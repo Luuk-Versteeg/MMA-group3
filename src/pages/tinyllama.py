@@ -3,10 +3,10 @@ import torch
 from transformers import pipeline
 # from tqdm import tqdme
 
-print("Cuda available?:", torch.cuda.is_available())
+# print("Cuda available?:", torch.cuda.is_available())
 
 torch.cuda.empty_cache()
-model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device='cuda')#device_map="auto")
+model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto")
 
 # def sent_classifier(prompt: str, dataset, n_samples: int, shuffle: bool = True):
 #     if shuffle: dataset = dataset.shuffle()
