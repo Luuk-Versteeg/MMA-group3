@@ -1,7 +1,4 @@
-from dash import Dash, html, dcc, Output, Input, State, ctx, callback, dependencies
-import plotly.express as px
-import dash_bootstrap_components as dbc
-import pandas as pd
+from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
 import plotly.graph_objects as go

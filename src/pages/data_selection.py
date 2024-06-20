@@ -1,12 +1,8 @@
-from dash import Dash, html, dcc, Output, Input, State, ctx, callback, dependencies
-import plotly.express as px
+from dash import html, dcc, Output, Input, callback, State
 import dash_bootstrap_components as dbc
-import pandas as pd
-from collections import defaultdict
-import itertools
 import plotly.graph_objects as go
 import dash_ag_grid
-
+import pandas as pd
 
 import plotly
 import random
@@ -26,6 +22,7 @@ data_selection = html.Div(children=[
     html.H1(children='Data selection', style={'textAlign':'center'}),
     html.Div(children=[
         html.Div(children=[
+            dcc.Store(id='selected-dataset'),
             dcc.Dropdown([d["name"] for d in datasets], placeholder="Select dataset", id='dataset-selection', style={"width": "100%"}),
             html.Div(children=[
                 dcc.Dropdown([], placeholder="Select subset", id="dataset-split", style={"marginTop": "10px", "width": "200px"}),
@@ -95,30 +92,42 @@ def update_dataset_details(dataset_name):
     return split, description, scheme
 
 
+@callback(
+    Output("selected-dataset", "data"),
+    Input("dataset-selection", "value"),
+    Input("dataset-split", "value"),
+    Input("n-samples", "value"),
+)
+def update_selected_dataset(dataset_name, dataset_split, n_samples):
+
+    if not dataset_name or not dataset_split:
+        return 
+    
+    dataset = select_dataset(dataset_name)
+
+    if dataset_split not in dataset["data"].keys():
+        return
+    
+    samples = dataset["data"][dataset_split].sample(n_samples)
+
+    return samples.to_dict()
+
 
 @callback(
     Output("samples-table", "columnDefs"),
     Output("samples-table", "rowData"),
     Output("samples-table", "selectedRows"),
-    Input("dataset-selection", "value"),
-    Input("dataset-split", "value"),
-    Input("n-samples", "value")
+    Input("selected-dataset", "data"),
 )
-def update_grid(dataset_name, dataset_split, n_samples):
+def update_grid(dataframe_data):
 
-    cols, rows, selected = list(), list(), list()
-
-    if not dataset_name or not dataset_split:
-        return cols, rows, selected
+    if not dataframe_data:
+        return [], [], []
     
-    dataset = select_dataset(dataset_name)
-
-    if dataset_split not in dataset["data"].keys():
-        return cols, rows, selected
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
     
-    df = dataset["data"][dataset_split].head(n_samples)
-    cols = [{"field": col} for col in df.columns.to_list()]
-    rows = df.to_dict("records")
+    cols = [{"field": col} for col in dataframe.columns.to_list()]
+    rows = dataframe.to_dict("records")
     selected = [rows[0]]
 
     return cols, rows, selected
@@ -164,25 +173,36 @@ def update_max_samples(dataset_name, dataset_split):
 
 @callback(
     Output("wordcloud", "figure"),
-    Input("dataset-selection", "value"),
-    Input("dataset-split", "value"),
-    Input("n-samples", "value")
+    Input("selected-dataset", "data"),
+    State("dataset-selection", "value"),
+    State("dataset-split", "value"),
 )
-def update_wordcloud_histogram(dataset_name, dataset_split, n_samples):
-    # Load your dataset
-    if dataset_name == "AG News":
-        dn = "agnews"
-    elif dataset_name == "Amazon Polarity":
-        dn = "amazon_polarity"
-    path = f"src/dataloaders/{dn}/data/{dataset_split}.csv"
-    df = pd.read_csv(path)
+def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
 
-    # Filter the DataFrame based on the selected dataset name and split
-    filtered_df = df['Description'].head(n_samples)
+    if not dataframe_data:
+        fig = go.Figure()
 
-    # Preprocess descriptions: Remove stop words
+        fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            annotations=[
+                dict(
+                    text="No dataset selected...",
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    font=dict(size=28, color="gray")
+                )
+            ],
+            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+        )
+
+        return fig
+    
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
+
     words = []
-    for description in filtered_df:
+    for description in dataframe["text"]:
         tokens = description.split()
         filtered_tokens = [word for word in tokens if word.lower() not in stop_words]
         words.extend(filtered_tokens)
@@ -190,7 +210,7 @@ def update_wordcloud_histogram(dataset_name, dataset_split, n_samples):
     # Count word frequencies
     word_counts = Counter(words)
     most_common_words = word_counts.most_common(25)
-    words, counts = zip(*most_common_words)
+    words, _ = zip(*most_common_words)
 
     # Generate random positions, colors, and sizes for the word cloud
     x = [random.random() for _ in range(30)]
@@ -210,6 +230,7 @@ def update_wordcloud_histogram(dataset_name, dataset_split, n_samples):
 
     # Define layout for the word cloud
     layout = go.Layout(
+        title=f"Distribution of selected samples from {dataset_name} ({dataset_split})",
         xaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
         yaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
         annotations=[
@@ -234,31 +255,41 @@ def update_wordcloud_histogram(dataset_name, dataset_split, n_samples):
 
 @callback(
     Output("label-histogram", "figure"),
-    Input("dataset-selection", "value"),
-    Input("dataset-split", "value"),
-    Input("n-samples", "value")
+    Input("selected-dataset", "data"),
+    State("dataset-selection", "value"),
+    State("dataset-split", "value"),
 )
-def update_label_histogram(dataset_name, dataset_split, n_samples):
-    # Load your dataset
-    # Replace 'your_dataset.csv' with the actual path to your CSV file
-    if dataset_name == "AG News":
-        dn = "agnews"
-    elif dataset_name == "Amazon Polarity":
-        dn = "amazon_polarity"
-    path = f"src/dataloaders/{dn}/data/{dataset_split}.csv"
-    df = pd.read_csv(path)
+def update_label_histogram(dataframe_data, dataset_name, dataset_split):
 
-    # Filter the DataFrame based on the selected dataset name and split
-    filtered_df = df['Class Index'].head(n_samples)
+    if not dataframe_data:
+        fig = go.Figure()
 
+        fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            annotations=[
+                dict(
+                    text="No dataset selected...",
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    font=dict(size=28, color="gray")
+                )
+            ],
+            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+        )
+
+        return fig
+    
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
 
     # Create the histogram for the 'class' column
     fig = go.Figure()
-    fig.add_trace(go.Histogram(x=filtered_df.values))
+    fig.add_trace(go.Histogram(x=dataframe.label))
 
     # Update layout
     fig.update_layout(
-        title=f"Distribution of {dataset_name} ({dataset_split})",
+        title=f"Distribution of selected samples from {dataset_name} ({dataset_split})",
         xaxis_title="Class",
         yaxis_title="Count",
         xaxis=dict(showgrid=False, zeroline=False),
@@ -280,7 +311,6 @@ def update_label_histogram(dataset_name, dataset_split, n_samples):
     )
 
     return fig
-
 
 @callback(
     Output("prompt-sample", "children"),
@@ -305,4 +335,3 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
     labels = 'labels: ' + dataset['scheme']
     
     return output, labels, n_samples
-
