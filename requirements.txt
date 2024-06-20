@@ -13,3 +13,4 @@ wget
 dash-holoniq-wordcloud
 pyarrow
 nltk
+huggingface_hub

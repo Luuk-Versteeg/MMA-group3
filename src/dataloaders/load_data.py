@@ -1,9 +1,12 @@
-import pandas as pd
-
 import dataloaders.agnews.metadata as agnews
-import dataloaders.amazon_polarity.metadata as amazon
+from dataloaders.agnews.loader import agnews_train, agnews_test, labels as ag_labels
 
-DATALOADER_PATH = "src/dataloaders/"
+import dataloaders.amazon_polarity.metadata as polarity
+from dataloaders.amazon_polarity.loader import polarity_train, polarity_test, labels as polarity_labels
+
+import dataloaders.glue_sst2.metadata as glue
+from dataloaders.glue_sst2.loader import glue_train, glue_validation, glue_test, labels as glue_labels
+
 
 datasets = [
     {
@@ -11,17 +14,30 @@ datasets = [
         "scheme": agnews.scheme,
         "description": agnews.description,
         "data": {
-            "train": pd.read_csv(DATALOADER_PATH + "agnews/data/train.csv"),
-            "test": pd.read_csv(DATALOADER_PATH + "agnews/data/test.csv")
-        }
+            "train": agnews_train,
+            "test": agnews_test,
+        },
+        "labels": ag_labels,
     },
     {
-        "name": amazon.name,
-        "scheme": amazon.scheme,
-        "description": amazon.description,
+        "name": polarity.name,
+        "scheme": polarity.scheme,
+        "description": polarity.description,
         "data": {
-            "test": pd.read_parquet(DATALOADER_PATH + "amazon_polarity/data/test-00000-of-00001.parquet", engine="pyarrow"),
-            # TODO add more splits
-        }
+            "train": polarity_train,
+            "test": polarity_test,
+        },
+        "labels": polarity_labels
+    },
+    {
+        "name": glue.name,
+        "scheme": glue.scheme,
+        "description": glue.description,
+        "data": {
+            "train": glue_train,
+            "validation": glue_validation,
+            "test": glue_test,
+        },
+        "labels": glue_labels
     }
 ]
