@@ -19,6 +19,7 @@ try:
     agnews_test = pd.read_parquet(DATA_FOLDER + TEST_DATA_PATH)
 
 except FileNotFoundError as e:
+    print("Downloading AGNEWS dataset...")
     agnews_train = pd.read_parquet(AGNEWS_DOWNLOAD_URL + TRAIN_DATA_PATH)
     agnews_test = pd.read_parquet(AGNEWS_DOWNLOAD_URL + TEST_DATA_PATH)
 

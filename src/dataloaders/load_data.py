@@ -1,11 +1,9 @@
-import pandas as pd
-
 import dataloaders.agnews.metadata as agnews
 from dataloaders.agnews.loader import agnews_train, agnews_test, labels as ag_labels
 
-import dataloaders.amazon_polarity.metadata as amazon
+import dataloaders.amazon_polarity.metadata as polarity
+from dataloaders.amazon_polarity.loader import polarity_train, polarity_test, labels as polarity_labels
 
-DATALOADER_PATH = "src/dataloaders/"
 
 datasets = [
     {
@@ -19,12 +17,13 @@ datasets = [
         "labels": ag_labels,
     },
     {
-        "name": amazon.name,
-        "scheme": amazon.scheme,
-        "description": amazon.description,
+        "name": polarity.name,
+        "scheme": polarity.scheme,
+        "description": polarity.description,
         "data": {
-            "test": pd.read_parquet(DATALOADER_PATH + "amazon_polarity/data/test-00000-of-00001.parquet", engine="pyarrow"),
-            # TODO add more splits
-        }
+            "train": polarity_train,
+            "test": polarity_test,
+        },
+        "labels": polarity_labels
     }
 ]
