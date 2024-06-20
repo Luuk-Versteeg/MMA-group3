@@ -214,7 +214,7 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     Input('variable-container', 'value'),
     State('variant-container', 'children'),
     State('variable-container', 'value'),
-    State('variant-store', 'data',),
+    State('variant-store', 'data'),
     prevent_initial_call=True
 )
 def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants):
@@ -223,20 +223,24 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
     # Add variants.
     if ctx_id == 'add-variant-button':
         if tabs_state == None:
-            return variants
-
-        idx = len(variants) + 1
+            return variants, all_variants
 
         if tabs_state not in all_variants:
             all_variants[tabs_state] = {}
+
+        idx = 1
+        while (True):
+            if str(idx) not in all_variants[tabs_state].keys():
+                idx = str(idx)
+                break
+            idx += 1
         all_variants[tabs_state][idx] = f"Variant {idx}"
 
-
         new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
-            dcc.Input(id={'type': 'variant-input', 'index': idx},
+            dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
                     value=all_variants[tabs_state][idx],
                     type='text'),
-            html.Button('X', id='button-delete'),
+            html.Button('X', id={'type': 'variant-button-delete', 'index': f"{tabs_state}-{idx}"}),
         ])
         variants.append(new_variant)
     # Add variables.
@@ -246,37 +250,54 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
                 dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
                         value=val,
                         type='text'),
-                html.Button('X', id='button-delete'),
+                html.Button('X', id={'type': 'variant-button-delete', 'index': f"{pressed_tab}-{idx}"}),
             ]) for idx, val in all_variants[pressed_tab].items()]
 
             variants = vars
         else:
             variants = []
 
-
     return variants, all_variants
+
 
 
 @callback(
     Output('variant-store','data'),
+    Output('variant-container', 'children', allow_duplicate=True),
     Input({'type': 'variant-input', 'index': dependencies.ALL}, 'value'),
+    Input({'type': 'variant-button-delete', 'index': dependencies.ALL}, 'n_clicks'),
     Input('remove-variable-button', 'n_clicks'),
     State('variable-container', 'value'),
-    State('variant-store','data')
+    State('variant-store','data'),
+    State('variant-container', 'children'),
+    prevent_initial_call=True
 )
-def update_variant_dict(values, removes, selected_tab, all_variants):
+def update_variant_dict(values, remove_variant, remove_variable, selected_tab, all_variants,variant_container):
     ctx_id = ctx.triggered_id
     if not ctx_id:
-        return all_variants
+        return all_variants, variant_container
     
+    # Remove a variable from the dict in store.
     if ctx_id == 'remove-variable-button':
-        #all_variants[selected_tab] = {}
         all_variants.pop(selected_tab, None)
-    else:
-        all_variants[selected_tab][str(ctx_id['index'])] = values[ctx_id['index'] - 1]
+    # Remove variant from store dict.
+    elif ctx_id['type'] == 'variant-button-delete':
+        idx_variable, idx_variant = ctx_id['index'].split('-')
+        all_variants[idx_variable].pop(idx_variant, None)
+        for child in variant_container:
+            if idx_variant == str(child['props']['children'][0]['props']['id']['index']):
+                variant_container.remove(child)
+                break
+    # Change the value of a variant (also in the store).
+    elif ctx_id['type'] == 'variant-input':
+        input_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        #input_index = eval(input_id)['index']
+        changed_value = ctx.triggered[0]['value']
 
-    return all_variants
-    
+        all_variants[selected_tab][str(ctx_id['index'])] = changed_value
+
+    return all_variants, variant_container
+
 
 @callback(
     Output('variable-container', 'children'),
