@@ -284,7 +284,25 @@ def update_label_histogram(dataset_name, dataset_split, n_samples):
 
 @callback(
     Output("prompt-sample", "children"),
-    Input("samples-table", "selectedRows")
+    Output("prompt-labels", "children"),
+    Output("select-num-samples", "value"),
+    Input("samples-table", "selectedRows"),
+    Input("dataset-selection", "value"),
+    Input("n-samples", "value")
 )
-def update_prompt_sample(selected_rows):
-    return 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
+def update_prompt_sample(selected_rows, dataset_name, n_samples):
+    if len(selected_rows) == 0:
+        return html.P("No sample selected..."), "labels: ", [0]
+ 
+    output = []
+
+    if 'content' in selected_rows[0].keys():
+        output.append(html.P(selected_rows[0]['content']))
+    elif 'Description' in selected_rows[0].keys():
+        output.append(html.P(selected_rows[0]['Description']))
+
+    dataset = select_dataset(dataset_name)
+    labels = 'labels: ' + dataset['scheme']
+    
+    return output, labels, n_samples
+
