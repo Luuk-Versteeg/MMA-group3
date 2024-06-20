@@ -25,7 +25,8 @@ app.layout = html.Div(
         #     prompt_engineering,
         #     evaluation
         # ])
-    ]
+    ],
+    style={"padding": "30px 40px"}
 )
 
 # app.layout = dbc.Container([

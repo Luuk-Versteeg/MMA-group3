@@ -5,7 +5,7 @@ import dataloaders.amazon_polarity.metadata as polarity
 from dataloaders.amazon_polarity.loader import polarity_train, polarity_test, labels as polarity_labels
 
 import dataloaders.glue_sst2.metadata as glue
-from dataloaders.glue_sst2.loader import glue_train, glue_validation, glue_test, labels as glue_labels
+from dataloaders.glue_sst2.loader import glue_train, glue_validation, labels as glue_labels
 
 
 datasets = [
@@ -36,7 +36,7 @@ datasets = [
         "data": {
             "train": glue_train,
             "validation": glue_validation,
-            "test": glue_test,
+            # "test": glue_test,
         },
         "labels": glue_labels
     }
