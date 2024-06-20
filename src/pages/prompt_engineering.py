@@ -21,74 +21,77 @@ prompt_engineering = html.Div(children=[
     html.H1(children='Prompt Engineering', style={'textAlign':'center'}),
     html.Div(children=[
         html.Div(
-            className='box',
+            className='selected-sample',
             children=[
-                html.Button('<', id='button-left', style={'height':'100%', 'width':50, 'display':'inline-block'}),
-                html.Div(id="prompt-sample", style={'height':'100%', 'flex':1, 'text-align':'center'}),
-                html.Button('>', id='button-right', style={'height':'100%', 'width':50, 'display':'inline-block'})
+                html.Button('<', id='button-left', style={"padding": "30px"}),
+                html.Div(id="prompt-sample", 
+                         children=" Improved Pitching Has the Keys Finishing on an Upswing As the season winds down for the Frederick Keys, Manager Tom Lawless is starting to enjoy the progress his pitching staff has made this season.",
+                         style={"padding": "15px 30px", "border": "1px solid black"}),
+                html.Button('>', id='button-right', style={"padding": "30px"})
             ],
-            style={'width':'50%', 'height':100, 'display':'flex'},
+            style={'width':'60%', 'display':'flex', 'gap': '20px', 'alignItems': "center"},
         ),
         html.Div(
             children='labels: ',
-            style={'width':'45%', 'height':100, 'display':'inline-block'},
+            style={'width':'35%', 'height':100, 'display':'inline-block'},
             id='prompt-labels'
         )
     ],
     style={'display':'flex', 'justify-content':'space-between'}
     ),
     html.Div(children=[
+        html.Div(children=[
+            html.P("Create a prompt template:", style={"marginBottom": "5px"}),
             dcc.Textarea(
                 id='textarea-prompt',
                 value='{var1}{text}\n\n{var2}',
-                style={'width':'58%', 'height':50, 'display':'inline-block', 
-                    'resize':'vertical'},
+                style={'width':'100%', 'height':'75px', 'display':'inline-block', 
+                    'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
             ),
+        ], style={"width": "58%"}),
+        html.Div(children=[
+            html.P("Possible answers:", style={"marginBottom": "5px"}),
             dcc.Input(
                 id='possible-answers',
                 value='Business, World, Science, Sports',
                 type='text',
-                style={'width':'38%', 'height': 50, 'display': 'inline-block'},
+                style={'width':'100%', 'height': '30px', 'display': 'inline-block'},
             )
+        ], style={"width": "38%"})
         ], 
-        style={'display':'flex', 'justify-content':'space-between'}
+        style={'display':'flex', 'justify-content':'space-between', 'marginTop': '10px'}
     ),
     html.Div(children=[
         html.Div(
             className='box',
             children=[
-                html.Div(className='box', children=[
+                html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
                     html.Button('Remove selected variable', id='remove-variable-button')
-                ]),
+                ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px'}),
                 dcc.Tabs(content_style={"width": "100%"},
                             parent_style={"width": "100%"},
                             style={'width':'100%'},
                             id="variable-container", children=[], vertical=True),
             ],
-            style={'width':'47%', 'height':400},
+            style={'width':'47%'},
         ),
         html.Div(
             className='box',
             children=[
                 html.Div(
                     id='tabs-content',
-                    children=[ 
-                                html.Button('Add variant', id='add-variant-button', n_clicks=0),
-                                ],
-                    style={'display':'flex',
-                            'justify-content':'center',
-                            'align-items':'center', 
-                            'height':50}
+                    children=[html.Button('Add variant', id='add-variant-button', n_clicks=0)],
+                    style={'display':'flex', 'justify-content':'center', 'padding': '10px 20px'}
                 ),
                 html.Div(id='variant-container', children=[
                 ]),
                 dcc.Store(id='variant-store', data=defaultdict(dict))
             ],
-            style={'width':'47%', 'height':400, 'display':'inline-block'},
+            style={'width':'47%', 'display':'inline-block'},
         )
         ],
-        style={'display':'flex', 'justify-content':'space-between'}
+        style={'display':'flex', 'justify-content':'space-between', 'marginTop': '20px', 'height': '250px'}
     ),
     html.Div(children=[
             html.Button('Generate prompts', id='button-generate-prompts'),
@@ -96,13 +99,15 @@ prompt_engineering = html.Div(children=[
             'Select number of samples',
             html.Div(children=dcc.Dropdown([10, 20, 50], 10, id='select-num-samples'))
         ], 
-        style={'width':'100%'}
+        style={'width':'100%', 'marginTop': '15px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
     html.Div(id='generated-prompts-container', children=[
-    ], style={'width':'100%'}),
+    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
+
     html.Div(id='tested-prompts-container', children=[
         html.Div(children='test prompt')
-    ], style={'width':'100%'})
+    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
+
 ])
 
 
@@ -135,7 +140,10 @@ def generate_prompts(generate_clicks, data, prompt):
             prompt_lines.append(html.Br())
         prompt_lines = prompt_lines[:-1]
 
-        generated_prompts.append(html.Div(id={'type': 'generated-prompt', 'index': int(idx)}, children=prompt_lines, style={'border':'2px solid #000', 'height':200, 'width':200, 'display':'inline-block'}))
+        generated_prompts.append(html.Div(
+            id={'type': 'generated-prompt', 'index': int(idx)}, 
+            children=prompt_lines, 
+            style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block'}))
 
     return generated_prompts
 
