@@ -15,10 +15,11 @@ from collections import Counter
 from widgets import histogram
 from dataloaders.load_data import datasets
 
-nltk.download('stopwords')
-nltk.download('brown')
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
+nltk.download('stopwords', quiet=True)
+nltk.download('brown', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
+
 stop_words = set(stopwords.words('english'))
 
 
