@@ -195,9 +195,9 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
             prompt_lines.append(line)
             # print(type(line))
             prompt_lines.append(html.Br())
-        # prompt_lines.append(html.Hr())
-        # prompt_lines.append(html.P(children="Predicted label: " + pred_label))
-        prompt_lines = prompt_lines[:-1]
+        prompt_lines.append(html.Hr())
+        prompt_lines.append(f"Predicted: {pred_label}")
+        # prompt_lines = prompt_lines[:-1]
 
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
