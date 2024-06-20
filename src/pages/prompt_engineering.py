@@ -16,6 +16,8 @@ from pages.data_selection import select_dataset
 from widgets import histogram
 from dataloaders.load_data import datasets
 
+from .tinyllama import sent_classifier, news_classifier
+
 
 prompt_engineering = html.Div(children=[
     html.H1(children='Prompt Engineering', style={'textAlign':'center'}),
@@ -94,6 +96,7 @@ prompt_engineering = html.Div(children=[
         style={'display':'flex', 'justify-content':'space-between', 'marginTop': '20px', 'height': '250px'}
     ),
     html.Div(children=[
+            dcc.Store('prompt-list'),
             html.Button('Generate prompts', id='button-generate-prompts'),
             html.Button('Test prompts', id='button-test-prompts'),
             'Select number of samples',
@@ -112,15 +115,17 @@ prompt_engineering = html.Div(children=[
 
 
 @callback(
-    Output('generated-prompts-container', 'children'),
+    Output('generated-prompts-container', 'children', allow_duplicate=True),
+    Output('prompt-list', 'data'),
     Input('button-generate-prompts', 'n_clicks'),
     State('variant-store', 'data'),
     State('textarea-prompt', 'value'),
+    prevent_initial_call = True
 )
 def generate_prompts(generate_clicks, data, prompt):
     ctx_id = ctx.triggered_id
     if not ctx_id:
-        return []
+        return [], []
 
     vars = []
     for var_num, variants in data.items():
@@ -128,10 +133,13 @@ def generate_prompts(generate_clicks, data, prompt):
     permurations = list(itertools.product(*vars))
 
     generated_prompts = []
+    prompt_list = []
     for idx, perm in enumerate(permurations, start=1):
         new_prompt = prompt
         for variable in perm:
             new_prompt = new_prompt.replace('{var' + variable[0] + '}', variable[1])
+        # Store prompts as strings, later to be used in test_prompts()
+        prompt_list.append(new_prompt)
 
         # Convert to list of lines with html.Br() instead of \n.
         prompt_lines = []
@@ -145,19 +153,54 @@ def generate_prompts(generate_clicks, data, prompt):
             children=prompt_lines, 
             style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block'}))
 
-    return generated_prompts
-
+    return generated_prompts, prompt_list
 
 @callback(
-    Output('tested-prompts-container', 'children'),
+    # Output('tested-prompts-container', 'children'),
+    Output('generated-prompts-container', 'children', allow_duplicate=True),
     Input('button-test-prompts', 'n_clicks'),
-    State('select-num-samples', 'value'),
-    State('generated-prompts-container', 'children'),
-    State('possible-answers', 'value')
+    Input("dataset-selection", "value"),
+    State('prompt-labels', 'children'),
+    State('prompt-list', 'data'),
+    State('prompt-sample', 'children'),
+    prevent_initial_call = True
     #State({'type': 'generated-prompt', 'index': dependencies.ALL}, 'children')
 )
-def test_prompts(test_button, num_samples, generated_prompts, possible_answers):
-    return []
+def test_prompts(test_button, dataset_name, true_label, generated_prompts, text):
+    if not test_button:
+        return []
+    
+    if dataset_name == "AG News":
+        classifier = news_classifier
+    if dataset_name == "Amazon Polarity" or dataset_name == "GLUE/sst2":
+        classifier = sent_classifier
+
+    pred_labels = []
+
+    for prompt in generated_prompts:
+        prompt = prompt.format(text=text)
+        pred_label = classifier(prompt)
+        pred_labels.append(pred_label)
+
+    # Convert to list of lines with html.Br() instead of \n.
+    colored_prompt_divs = []
+    for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
+        if pred_label == true_label:
+            color='green' 
+        else:
+            color='red'
+        prompt_lines = []
+        for line in new_prompt.split('\n'):
+            prompt_lines.append(line)
+            prompt_lines.append(html.Br())
+        prompt_lines = prompt_lines[:-1]
+
+        colored_prompt_divs.append(html.Div(
+            id={'type': 'generated-prompt', 'index': int(idx)}, 
+            children=prompt_lines, 
+            style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color}))
+
+    return colored_prompt_divs
 
 
 @callback(
