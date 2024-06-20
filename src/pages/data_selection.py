@@ -311,3 +311,21 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
     )
 
     return fig
+
+
+@callback(
+    Output("prompt-sample", "children"),
+    Output("prompt-labels", "children"),
+    Output("select-num-samples", "value"),
+    Output("possible-answers", "value"),
+    Input("samples-table", "selectedRows"),
+    Input("dataset-selection", "value"),
+    Input("n-samples", "value")
+)
+def update_prompt_sample(selected_rows, dataset_name, n_samples):
+    if len(selected_rows) == 0:
+        return html.P("No sample selected..."), "labels: ", [0], ''
+
+    dataset = select_dataset(dataset_name)
+
+    return selected_rows[0]['text'], selected_rows[0]['label'], n_samples, dataset['scheme']

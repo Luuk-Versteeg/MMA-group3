@@ -1,6 +1,20 @@
 from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
+import plotly.graph_objects as go
+import dash_ag_grid
+
+
+import plotly
+import random
+import nltk
+from nltk.corpus import stopwords
+from collections import Counter
+from pages.data_selection import select_dataset
+
+
+from widgets import histogram
+from dataloaders.load_data import datasets
 
 
 prompt_engineering = html.Div(children=[
@@ -18,8 +32,9 @@ prompt_engineering = html.Div(children=[
             style={'width':'60%', 'display':'flex', 'gap': '20px', 'alignItems': "center"},
         ),
         html.Div(
-            children=html.P('labels: World, Sports, Business and Sci/Tech'),
-            style={'width':'35%'},
+            children='labels: ',
+            style={'width':'35%', 'height':100, 'display':'inline-block'},
+            id='prompt-labels'
         )
     ],
     style={'display':'flex', 'justify-content':'space-between'}
@@ -256,3 +271,43 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
     return tabs, active_tab
 
 
+@callback(
+    Output("samples-table", "selectedRows", allow_duplicate=True),
+    Output("prompt-sample", "children", allow_duplicate=True),
+    Output("prompt-labels", "children", allow_duplicate=True),
+    Input("button-left", "n_clicks"),
+    Input("button-right", "n_clicks"),
+    Input("samples-table", "selectedRows"),
+    Input("samples-table", "rowData"),
+    Input("dataset-selection", "value"),
+    prevent_initial_call=True
+
+)
+def change_sample(left_clicks, right_clicks, selected_rows, row_data, dataset_name):
+    if selected_rows:
+        row_index = selected_rows[0]
+        for i, entry in enumerate(row_data):
+            if entry == selected_rows[0]:
+                row_index = i
+    else:
+        return selected_rows, [], []
+
+    ctx_id = ctx.triggered_id
+    if ctx_id == 'button-left':
+        row_index -= 1
+    elif ctx_id == 'button-right':
+        row_index += 1
+
+    row_index %= len(row_data)
+
+    new_selected = [row_data[row_index]]
+
+    output = []
+    if 'content' in new_selected[0].keys():
+        output.append(html.P(new_selected[0]['content']))
+    elif 'Description' in new_selected[0].keys():
+        output.append(html.P(new_selected[0]['Description']))
+    dataset = select_dataset(dataset_name)
+    labels = 'labels: ' + dataset['scheme']
+    
+    return new_selected, output, labels
