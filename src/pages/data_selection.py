@@ -1,12 +1,8 @@
-from dash import Dash, html, dcc, Output, Input, State, ctx, callback, dependencies
-import plotly.express as px
+from dash import html, dcc, Output, Input, callback
 import dash_bootstrap_components as dbc
 import pandas as pd
-from collections import defaultdict
-import itertools
 import plotly.graph_objects as go
 import dash_ag_grid
-
 
 import plotly
 import random
@@ -280,11 +276,3 @@ def update_label_histogram(dataset_name, dataset_split, n_samples):
     )
 
     return fig
-
-
-@callback(
-    Output("prompt-sample", "children"),
-    Input("samples-table", "selectedRows")
-)
-def update_prompt_sample(selected_rows):
-    return 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
