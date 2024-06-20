@@ -1,7 +1,7 @@
 import pandas as pd
 
 import dataloaders.agnews.metadata as agnews
-from dataloaders.agnews.download import agnews_train, agnews_test, labels as ag_labels
+from dataloaders.agnews.loader import agnews_train, agnews_test, labels as ag_labels
 
 import dataloaders.amazon_polarity.metadata as amazon
 
