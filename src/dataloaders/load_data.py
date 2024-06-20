@@ -1,6 +1,8 @@
 import pandas as pd
 
 import dataloaders.agnews.metadata as agnews
+from dataloaders.agnews.download import agnews_train, agnews_test, labels as ag_labels
+
 import dataloaders.amazon_polarity.metadata as amazon
 
 DATALOADER_PATH = "src/dataloaders/"
@@ -11,9 +13,10 @@ datasets = [
         "scheme": agnews.scheme,
         "description": agnews.description,
         "data": {
-            "train": pd.read_csv(DATALOADER_PATH + "agnews/data/train.csv"),
-            "test": pd.read_csv(DATALOADER_PATH + "agnews/data/test.csv")
-        }
+            "train": agnews_train,
+            "test": agnews_test,
+        },
+        "labels": ag_labels,
     },
     {
         "name": amazon.name,
