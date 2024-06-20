@@ -5,7 +5,7 @@ POLARITY_DOWNLOAD_URL = "hf://datasets/fancyzhx/amazon_polarity/amazon_polarity/
 
 DATA_FOLDER = str(Path(__file__).parent) + "/data/"
 
-TRAIN_DATA_PATH = "train.parquet"
+TRAIN_DATA_PATH = "train-00000-of-00001.parquet"
 TRAIN_DATA_PATH1 = "train-00000-of-00004.parquet"
 TRAIN_DATA_PATH2 = "train-00001-of-00004.parquet"
 TRAIN_DATA_PATH3 = "train-00002-of-00004.parquet"

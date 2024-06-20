@@ -4,6 +4,9 @@ from dataloaders.agnews.loader import agnews_train, agnews_test, labels as ag_la
 import dataloaders.amazon_polarity.metadata as polarity
 from dataloaders.amazon_polarity.loader import polarity_train, polarity_test, labels as polarity_labels
 
+import dataloaders.glue_sst2.metadata as glue
+from dataloaders.glue_sst2.loader import glue_train, glue_validation, glue_test, labels as glue_labels
+
 
 datasets = [
     {
@@ -25,5 +28,16 @@ datasets = [
             "test": polarity_test,
         },
         "labels": polarity_labels
+    },
+    {
+        "name": glue.name,
+        "scheme": glue.scheme,
+        "description": glue.description,
+        "data": {
+            "train": glue_train,
+            "validation": glue_validation,
+            "test": glue_test,
+        },
+        "labels": glue_labels
     }
 ]
