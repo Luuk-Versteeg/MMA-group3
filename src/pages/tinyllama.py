@@ -1,7 +1,7 @@
 from sklearn import metrics
 import torch
 from transformers import pipeline
-from tqdm import tqdm
+# from tqdm import tqdme
 
 torch.cuda.empty_cache()
 model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto")
@@ -140,14 +140,14 @@ def news_classifier(prompt: str):
     elif 'sports' in answer or 'sport' in answer:
         predicted_label = "Sports"
     elif 'business' in answer:
-        predicted_labels = "Business"
+        predicted_label = "Business"
     elif 'science' in answer or 'technology' in answer:
         predicted_label = "Sci/Tech"
     else:
-        predicted_labels = "Unknown"
+        predicted_label = "Unknown"
     
     torch.cuda.empty_cache()
-    return predicted_labels
+    return predicted_label
     
 def make_confusion_matrix(y_pred, y_true):
     return metrics.confusion_matrix(y_true, y_pred)

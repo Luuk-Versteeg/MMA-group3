@@ -17,6 +17,7 @@ from widgets import histogram
 from dataloaders.load_data import datasets
 
 from .tinyllama import sent_classifier, news_classifier
+from tqdm import tqdm
 
 
 prompt_engineering = html.Div(children=[
@@ -46,7 +47,7 @@ prompt_engineering = html.Div(children=[
             html.P("Create a prompt template:", style={"marginBottom": "5px"}),
             dcc.Textarea(
                 id='textarea-prompt',
-                value='{var1}{text}\n\n{var2}',
+                value='{var1} {text}\n\n{var2}',
                 style={'width':'100%', 'height':'75px', 'display':'inline-block', 
                     'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
             ),
@@ -177,7 +178,7 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
 
     pred_labels = []
 
-    for prompt in generated_prompts:
+    for prompt in tqdm(generated_prompts):
         prompt = prompt.format(text=text)
         pred_label = classifier(prompt)
         pred_labels.append(pred_label)
@@ -192,7 +193,10 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         prompt_lines = []
         for line in new_prompt.split('\n'):
             prompt_lines.append(line)
+            # print(type(line))
             prompt_lines.append(html.Br())
+        # prompt_lines.append(html.Hr())
+        # prompt_lines.append(html.P(children="Predicted label: " + pred_label))
         prompt_lines = prompt_lines[:-1]
 
         colored_prompt_divs.append(html.Div(
