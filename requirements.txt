@@ -14,3 +14,7 @@ dash-holoniq-wordcloud
 pyarrow
 nltk
 huggingface_hub
+torch
+accelerate
+transformers
+scikit-learn

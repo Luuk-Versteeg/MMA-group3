@@ -8,6 +8,7 @@ import plotly
 import random
 import nltk
 from nltk.corpus import stopwords
+from nltk import word_tokenize, pos_tag
 from collections import Counter
 
 
@@ -15,6 +16,9 @@ from widgets import histogram
 from dataloaders.load_data import datasets
 
 nltk.download('stopwords')
+nltk.download('brown')
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 stop_words = set(stopwords.words('english'))
 
 
@@ -202,21 +206,34 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     dataframe = pd.DataFrame.from_dict(dataframe_data)
 
     words = []
+    allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
     for description in dataframe["text"]:
-        tokens = description.split()
-        filtered_tokens = [word for word in tokens if word.lower() not in stop_words]
+        # We exclude stop words and only include NP and VP
+        tokens = word_tokenize(description)
+        tokens_pos = nltk.pos_tag(tokens)
+        filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
         words.extend(filtered_tokens)
 
     # Count word frequencies
     word_counts = Counter(words)
     most_common_words = word_counts.most_common(25)
-    words, _ = zip(*most_common_words)
+    words, counts = zip(*most_common_words)
 
-    # Generate random positions, colors, and sizes for the word cloud
-    x = [random.random() for _ in range(30)]
-    y = [random.random() for _ in range(30)]
-    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for _ in range(30)]
-    sizes = [random.randint(15, 35) for _ in range(30)]
+    # Normalize counts to a range suitable for font sizes
+    min_size, max_size = 15, 35
+    min_count, max_count = min(counts), max(counts)
+    
+    def normalize(size, min_count, max_count, min_size, max_size):
+        if max_count == min_count:  # handle the case when all counts are the same
+            return (min_size + max_size) / 2
+        return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
+
+    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in counts]
+
+    # Generate random positions and colors for the word cloud
+    x = [random.random() for _ in range(len(words))]
+    y = [random.random() for _ in range(len(words))]
+    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for _ in range(len(words))]
 
     # Create the word cloud using Plotly
     data = go.Scatter(
@@ -228,28 +245,13 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
         textfont={'size': sizes, 'color': colors}
     )
 
-    # Define layout for the word cloud
-    layout = go.Layout(
-        title=f"Distribution of selected samples from {dataset_name} ({dataset_split})",
-        xaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
-        yaxis={'showgrid': False, 'showticklabels': False, 'zeroline': False},
-        annotations=[
-            dict(
-                text=f"{dataset_name} - {dataset_split}",
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                font=dict(size=12, color="gray"),
-                x=0,
-                y=-0.15,  # Position it below the plot
-                xanchor='left',
-                yanchor='top'
-            )
-        ],
-        margin=dict(b=30, l=30, r=30, t=30)  # Adjust margins for better spacing
-    )
+    fig = go.Figure(data=[data])
 
-    fig = go.Figure(data=[data], layout=layout)
+    fig.update_layout(
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        margin=dict(b=0, l=0, r=0, t=0)
+    )
 
     return fig
 
