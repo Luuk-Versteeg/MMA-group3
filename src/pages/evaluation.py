@@ -1,10 +1,18 @@
-from dash import html, Output, Input, callback, dcc
+from dash import html, Output, Input, callback, dcc, State
 import dash_ag_grid
 import plotly.figure_factory as ff
+import plotly.graph_objects as go
+
+import pandas as pd
 from .tinyllama import sent_classifier, news_classifier, make_confusion_matrix
+from pages.data_selection import select_dataset
+import tqdm
+from collections import defaultdict
+from sklearn.metrics import confusion_matrix
 
 
 evaluation = html.Div(children=[
+    dcc.Store(id='prompt-predictions'),
     html.H1(children='Evaluation', style={'textAlign':'center'}),
     html.Button('Run prompts', id='run-all-prompts-btn'),
     html.Div(children=dash_ag_grid.AgGrid(
@@ -15,7 +23,7 @@ evaluation = html.Div(children=[
             "pagination": False,
             "paginationAutoPageSize": True,
             "suppressCellFocus": True,
-            "rowSelection": "single",
+            "rowSelection": "multiple",
         },
         selectedRows=[],
         # defaultColDef={"filter": "agTextColumnFilter"},
@@ -35,48 +43,133 @@ evaluation = html.Div(children=[
 @callback(
     Output("evaluation-table", "rowData"),
     Output("evaluation-table", "columnDefs"),
-    Input("dataset-selection", "value"),
-    Input("dataset-split", "value"),
-    Input("run-all-prompts-btn", "value")
+    Output("prompt-predictions", "data"),
+    Input("run-all-prompts-btn", "n_clicks"),
+    State("dataset-selection", "value"),
+    State("selected-dataset", "data"),
+    State('prompt-list', 'data'),
+#    State('prompt-predictions', 'data'),
+    State("samples-table", "rowData")
 )
-def update_evaluation_table(dataset_name, dataset_split, button_clicked):
-    return [], []
+def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prompt_list, samples):
+    print("GENERATED_PROMPTS: ", prompt_list)
+    print("SAMPLES",samples)
+
+    if dataset_name == "AG News":
+        classifier = news_classifier
+    if dataset_name == "Amazon Polarity" or dataset_name == "GLUE/sst2":
+        classifier = sent_classifier
+
+    ## prompt : {label1 : #, label2 : #, unknown : #}
+    prediction_dict = defaultdict(dict)
+    total_per_class = defaultdict(int)
+
+    for sample in samples:
+        text = sample['text']
+        true_label = sample['label']
+        pred_labels = []
+        total_per_class[true_label] += 1
+
+        # UNCOMMENT THIS TO USE MODEL PREDICTIONS
+        # for i, prompt in enumerate(prompt_list):
+        #     prompt = prompt.format(text=text)
+        #     pred_label = classifier(prompt)            
+        #     pred_labels.append(pred_label)
+
+        #     # Used in the confusion matrix.
+        #     if 'preds' not in prediction_dict[i]:
+        #         prediction_dict[i]['preds'] = []
+        #     prediction_dict[i]['preds'].append((pred_label, true_label))
+
+        ### TEMPORARILY ALWAYS PREDICT BUSINESS
+        for i, prompt in enumerate(prompt_list):
+            pred_label = 'Business'
+            pred_labels.append(pred_label)
+            if 'preds' not in prediction_dict[i]:
+                prediction_dict[i]['preds'] = []
+            prediction_dict[i]['preds'].append((pred_label, true_label))
+        ###
+                
+        for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, prompt_list)):
+            if true_label not in prediction_dict[idx]:
+                prediction_dict[idx][true_label] = 0
+            if 'Unknown' not in prediction_dict[idx]:
+                prediction_dict[idx]['Unknown'] = 0
+
+            if pred_label == 'Unknown':
+                prediction_dict[idx]['Unknown'] += 1
+            else: 
+                if true_label == pred_label:
+                    prediction_dict[idx][true_label] += 1
+
+        
+        
+    labels = select_dataset(dataset_name)['scheme'].split(", ")
+    colDefs = [{'field':'#'}, {"field":"Prompt"}, {"field":"Total Correct"}]
+    for label in labels:
+        colDefs.append({"field": label})
+
+    colDefs.append({"field": "Unknown"})
+    predictions = prediction_dict
+
+    rowData = []
+    for i, prompt in enumerate(prompt_list):
+        if i not in predictions:
+            continue
+
+        preds = predictions[i]
+
+        row = {}
+        row['#'] = i + 1
+        row['Prompt'] = prompt
+        total_correct = 0
+        for label in labels:
+            if label not in preds:
+                row[label] = 0
+            else:
+                row[label] = f"{preds[label]} / {total_per_class[label]}"
+                total_correct += preds[label]
+
+        row['Unknown'] = preds['Unknown']
+        row['Total Correct'] = f"{total_correct} / {len(samples)}"
+
+        rowData.append(row)
+
+    return rowData, colDefs, prediction_dict
 
 @callback(
     Output("confusion-matrix", "figure"),
     # Input("evaluation-table", "rowData"),
-    Input("selected-dataset", "data"),
-    Input("generated-prompts-container", "children"),
-    Input("run-all-prompts-btn", "n_clicks")
+    Input("evaluation-table", "selectedRows"),
+    #Input("selected-dataset", "data"),
+    #Input("generated-prompts-container", "children"),
+    #Input("run-all-prompts-btn", "n_clicks"),
+    State("dataset-selection", "value"),
+    State("prompt-predictions", "data")
 )
-def update_confusion_matrix(data, prompts, n_clicked):
-    if not n_clicked:
-        return ff.create_annotated_heatmap([[0,0],[0,0]], )
-    ###########
-    # Kan weg zodra model is gelinkt met data_selction.py
-    # from datasets import load_dataset
-    # data = load_dataset("fancyzhx/amazon_polarity", split="test")
-    ###########
-    print(data)
-    # {sentence} will be replace by the sentence from the dataset.
-    prompt = """
-    Given this sentence: "{sentence}"
+def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
+    predicted_labels = []
+    gt_labels = []
+    for row in selected_rows:
+        for (pred, gt) in prediction_dict[str(row['#'] - 1)]['preds']:
+            predicted_labels.append(pred)
+            gt_labels.append(gt)
+    labels = select_dataset(dataset_name)['scheme'].split(", ")
+    cm = confusion_matrix(gt_labels, predicted_labels, labels=labels)
 
-    Would you say this sentence is positive or negative?
-    """
-    n_samples = 5
-    predicted_labels, true_labels = sent_classifier(prompt, data, n_samples, False)
-    confusion_matrix = make_confusion_matrix(predicted_labels, true_labels)
+    fig = go.Figure(data=go.Heatmap(
+        z=cm,
+        x=labels,
+        y=labels,
+        text=cm,
+        texttemplate="%{text}",
+        textfont={"size":12},
+        hoverongaps=False,
+        colorscale='Viridis'))
+    fig.update_layout(
+        title='Confusion Matrix',
+        xaxis_title='Predicted Label',
+        yaxis_title='True Label')
 
-    labels = []
-    if -1 in predicted_labels or -1 in true_labels:
-        labels.append("unknown")
-    if 0 in predicted_labels or 0 in true_labels:
-        labels.append("negative")
-    if 1 in predicted_labels or 1 in true_labels:
-        labels.append("positive")
-    
-    fig = ff.create_annotated_heatmap(confusion_matrix, x=labels, y=labels)
-    fig.update_layout(width=500, height=500)
     return fig
 

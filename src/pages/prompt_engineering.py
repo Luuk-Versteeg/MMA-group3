@@ -171,6 +171,8 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     if not test_button:
         return []
     
+    print("GENERATED_PROMPTS: ", generated_prompts)
+    
     if dataset_name == "AG News":
         classifier = news_classifier
     if dataset_name == "Amazon Polarity" or dataset_name == "GLUE/sst2":
@@ -183,6 +185,12 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         pred_label = classifier(prompt)
         pred_labels.append(pred_label)
 
+    # Temporary
+    # for prompt in tqdm(generated_prompts):
+    #     pred_labels.append('Business')
+    
+
+    
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
     for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
