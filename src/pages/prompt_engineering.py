@@ -2,8 +2,9 @@ from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
 
-from .tinyllama import sent_classifier, news_classifier
+from .tinyllama import sent_classifier, news_classifier, snellius
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 prompt_engineering = html.Div(children=[
@@ -141,27 +142,33 @@ def generate_prompts(generate_clicks, data, prompt):
     Output('generated-prompts-container', 'children', allow_duplicate=True),
     Input('button-test-prompts', 'n_clicks'),
     Input("dataset-selection", "value"),
-    State('prompt-label', 'children'),
+    State('prompt-labels', 'children'),
     State('prompt-list', 'data'),
     State('prompt-sample', 'children'),
     prevent_initial_call = True
-    #State({'type': 'generated-prompt', 'index': dependencies.ALL}, 'children')
 )
 def test_prompts(test_button, dataset_name, true_label, generated_prompts, text):
     if not test_button:
         return []
-    
+
     if dataset_name == "AG News":
         classifier = news_classifier
     if dataset_name == "Amazon Polarity" or dataset_name == "GLUE/sst2":
         classifier = sent_classifier
 
     pred_labels = []
-
-    for prompt in tqdm(generated_prompts):
-        prompt = prompt.format(text=text)
-        pred_label = classifier(prompt)
-        pred_labels.append(pred_label)
+    if snellius:
+        with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
+            future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
+            total_prompts = len(generated_prompts)
+            for future in tqdm(as_completed(future_to_prompt), total=total_prompts):
+                label, answer = future.result()
+                pred_labels.append(label)
+    else:
+        for prompt in tqdm(generated_prompts):
+            prompt = prompt.format(text=text)
+            pred_label, answer = classifier(prompt)
+            pred_labels.append(pred_label)
 
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
@@ -173,11 +180,9 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         prompt_lines = []
         for line in new_prompt.split('\n'):
             prompt_lines.append(line)
-            # print(type(line))
             prompt_lines.append(html.Br())
         prompt_lines.append(html.Hr())
         prompt_lines.append(f"Predicted: {pred_label}")
-        # prompt_lines = prompt_lines[:-1]
 
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
