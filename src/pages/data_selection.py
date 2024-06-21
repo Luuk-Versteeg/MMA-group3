@@ -7,10 +7,9 @@ import pandas as pd
 import plotly
 import random
 import nltk
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk import word_tokenize, pos_tag
 from collections import Counter
-
 
 from widgets import histogram
 from dataloaders.load_data import datasets
@@ -21,9 +20,8 @@ from dataloaders.load_data import datasets
 # nltk.download('averaged_perceptron_tagger')
 stop_words = set(stopwords.words('english'))
 
-
 data_selection = html.Div(children=[
-    html.H1(children='Data selection', style={'textAlign':'center'}),
+    html.H1(children='Data selection', style={'textAlign': 'center'}),
     html.Div(children=[
         html.Div(children=[
             dcc.Store(id='selected-dataset'),
@@ -35,7 +33,7 @@ data_selection = html.Div(children=[
                     dbc.Input(type="number", min=0, value=10, max=100, step=1, id="n-samples"),
                     html.P(children="(max: )", id="max-samples")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
-                html.P(id="dataset-description"), 
+                html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")
             ]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
@@ -60,7 +58,9 @@ data_selection = html.Div(children=[
         # className='stretchy-widget ag-theme-alpine',
         # style={'width': '', 'height': ''},
         id='samples-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"})
+    ), style={"marginTop": "30px", "marginBottom": "30px"}),
+    # New div for displaying synonyms
+    html.Div(id="synonyms-output", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
 ])
 
 
@@ -70,7 +70,7 @@ def select_dataset(name, datasets=datasets):
 
     if len(dataset) == 0:
         raise KeyError(f"There's no dataset called: {name}")
-    
+
     return dataset[0]
 
 
@@ -81,18 +81,16 @@ def select_dataset(name, datasets=datasets):
     Input("dataset-selection", "value")
 )
 def update_dataset_details(dataset_name):
-
     split = list()
     description = "Description: "
     scheme = "Scheme: "
 
     if dataset_name:
         dataset = select_dataset(dataset_name)
-
         split += list(dataset["data"].keys())
         description += dataset["description"]
         scheme += dataset["scheme"]
-    
+
     return split, description, scheme
 
 
@@ -103,17 +101,14 @@ def update_dataset_details(dataset_name):
     Input("n-samples", "value"),
 )
 def update_selected_dataset(dataset_name, dataset_split, n_samples):
-
     if not dataset_name or not dataset_split:
-        return 
-    
-    dataset = select_dataset(dataset_name)
+        return
 
+    dataset = select_dataset(dataset_name)
     if dataset_split not in dataset["data"].keys():
         return
-    
-    samples = dataset["data"][dataset_split].sample(n_samples)
 
+    samples = dataset["data"][dataset_split].sample(n_samples)
     return samples.to_dict()
 
 
@@ -124,24 +119,31 @@ def update_selected_dataset(dataset_name, dataset_split, n_samples):
     Input("selected-dataset", "data"),
 )
 def update_grid(dataframe_data):
-
     if not dataframe_data:
         return [], [], []
-    
+
     dataframe = pd.DataFrame.from_dict(dataframe_data)
-    
     cols = [{"field": col} for col in dataframe.columns.to_list()]
     rows = dataframe.to_dict("records")
     selected = [rows[0]]
 
     return cols, rows, selected
 
+
+def get_synonyms(word):
+    synonyms = set()
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            if lemma.name() != word:
+                synonyms.add(lemma.name())
+    return list(synonyms)
+
+
 @callback(
     Output("selected-sample", "children"),
     Input("samples-table", "selectedRows")
 )
 def update_sample(selected_rows):
-
     if len(selected_rows) == 0:
         return html.P("No sample selected...")
 
@@ -160,18 +162,15 @@ def update_sample(selected_rows):
     Input("dataset-split", "value"),
 )
 def update_max_samples(dataset_name, dataset_split):
-
     if not dataset_name or not dataset_split:
         return "(max: 0)", 0
-    
-    dataset = select_dataset(dataset_name)
 
+    dataset = select_dataset(dataset_name)
     if dataset_split not in dataset["data"].keys():
         return "(max: 0)", 0
-    
+
     df = dataset["data"][dataset_split]
     max_samples = len(df)
-
     return f"(max: {max_samples})", max_samples
 
 
@@ -184,7 +183,6 @@ def update_max_samples(dataset_name, dataset_split):
 def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     if not dataframe_data:
         fig = go.Figure()
-
         fig.update_layout(
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -199,31 +197,26 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-
         return fig
-    
-    dataframe = pd.DataFrame.from_dict(dataframe_data)
 
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
     words_per_label = {}
     allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
     for _, row in dataframe.iterrows():
         label = row['label']
         description = row['text']
-        
         tokens = word_tokenize(description)
         tokens_pos = nltk.pos_tag(tokens)
         filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
-
         if label not in words_per_label:
             words_per_label[label] = []
-
         words_per_label[label].extend(filtered_tokens)
 
     most_common_words = {}
     for label, words in words_per_label.items():
         word_counts = Counter(words)
         most_common_words[label] = word_counts.most_common(10)
-    
+
     all_words = []
     all_counts = []
     all_labels = []
@@ -238,7 +231,6 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     # Normalize counts to a range suitable for font sizes
     min_size, max_size = 10, 35
     min_count, max_count = min(all_counts), max(all_counts)
-    
     def normalize(size, min_count, max_count, min_size, max_size):
         if max_count == min_count:  # handle the case when all counts are the same
             return (min_size + max_size) / 2
@@ -292,10 +284,8 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     State("dataset-split", "value"),
 )
 def update_label_histogram(dataframe_data, dataset_name, dataset_split):
-
     if not dataframe_data:
         fig = go.Figure()
-
         fig.update_layout(
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -310,15 +300,12 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-
         return fig
-    
-    dataframe = pd.DataFrame.from_dict(dataframe_data)
 
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
     # Create the histogram for the 'class' column
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=dataframe.label))
-
     # Update layout
     fig.update_layout(
         title=f"Distribution of selected samples from {dataset_name} ({dataset_split})",
@@ -341,7 +328,6 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
             )
         ],
     )
-
     return fig
 
 
@@ -359,5 +345,28 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
         return html.P("No sample selected..."), "labels: ", [0], ''
 
     dataset = select_dataset(dataset_name)
-
     return selected_rows[0]['text'], selected_rows[0]['label'], n_samples, dataset['scheme']
+
+
+# New callback for displaying synonyms
+@callback(
+    Output("synonyms-output", "children"),
+    Input("samples-table", "selectedRows")
+)
+def display_synonyms(selected_rows):
+    if len(selected_rows) == 0:
+        return html.P("No sample selected...")
+
+    selected_text = selected_rows[0].get('text', '')
+    tokens = word_tokenize(selected_text)
+    synonyms_list = []
+
+    for token in tokens:
+        synonyms = get_synonyms(token)
+        if synonyms:
+            synonyms_list.append(html.P(f"{token} -> {', '.join(synonyms)}"))
+
+    if not synonyms_list:
+        return html.P("No synonyms found...")
+
+    return synonyms_list
