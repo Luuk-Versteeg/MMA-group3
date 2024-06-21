@@ -1,4 +1,4 @@
-from dash import html, Output, Input, callback, dcc, State
+from dash import html, Output, Input, callback, dcc, State, ctx
 import dash_ag_grid
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
@@ -52,8 +52,9 @@ evaluation = html.Div(children=[
     State("samples-table", "rowData")
 )
 def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prompt_list, samples):
-    print("GENERATED_PROMPTS: ", prompt_list)
-    print("SAMPLES",samples)
+    ctx_id = ctx.triggered_id
+    if ctx_id != 'run-all-prompts-btn':
+        return [], [], {}
 
     if dataset_name == "AG News":
         classifier = news_classifier
@@ -148,6 +149,25 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
     State("prompt-predictions", "data")
 )
 def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
+    ctx_id = ctx.triggered_id
+    if ctx_id != 'evaluation-table' or len(selected_rows) == 0:
+        fig = go.Figure()
+        fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            annotations=[
+                dict(
+                    text="No prompt selected...",
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    font=dict(size=28, color="gray")
+                )
+            ],
+            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+        )
+        return fig
+
     predicted_labels = []
     gt_labels = []
     for row in selected_rows:
