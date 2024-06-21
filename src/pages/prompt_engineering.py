@@ -1,20 +1,6 @@
 from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
-import plotly.graph_objects as go
-import dash_ag_grid
-
-
-import plotly
-import random
-import nltk
-from nltk.corpus import stopwords
-from collections import Counter
-from pages.data_selection import select_dataset
-
-
-from widgets import histogram
-from dataloaders.load_data import datasets
 
 from .tinyllama import sent_classifier, news_classifier
 from tqdm import tqdm
@@ -29,41 +15,37 @@ prompt_engineering = html.Div(children=[
                 html.Button('<', id='button-left', style={"padding": "30px"}),
                 html.Div(id="prompt-sample", 
                          children=" Improved Pitching Has the Keys Finishing on an Upswing As the season winds down for the Frederick Keys, Manager Tom Lawless is starting to enjoy the progress his pitching staff has made this season.",
-                         style={"padding": "15px 30px", "border": "1px solid black"}),
+                         style={"padding": "15px 30px", "border": "1px solid black", "width": "100%", 
+                                "minHeight": "100px", "display": "flex", "alignItems": "center", "justifyContent": "center"}),
                 html.Button('>', id='button-right', style={"padding": "30px"})
             ],
             style={'width':'60%', 'display':'flex', 'gap': '20px', 'alignItems': "center"},
         ),
-        html.Div(
-            children='labels: ',
-            style={'width':'35%', 'height':100, 'display':'inline-block'},
-            id='prompt-labels'
-        )
-    ],
-    style={'display':'flex', 'justify-content':'space-between'}
-    ),
-    html.Div(children=[
         html.Div(children=[
-            html.P("Create a prompt template:", style={"marginBottom": "5px"}),
-            dcc.Textarea(
-                id='textarea-prompt',
-                value='{var1} {text}\n\n{var2}',
-                style={'width':'100%', 'height':'75px', 'display':'inline-block', 
-                    'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
-            ),
-        ], style={"width": "58%"}),
-        html.Div(children=[
-            html.P("Possible answers:", style={"marginBottom": "5px"}),
-            dcc.Input(
+            html.P(
                 id='possible-answers',
-                value='Business, World, Science, Sports',
-                type='text',
-                style={'width':'100%', 'height': '30px', 'display': 'inline-block'},
+                children='No dataset selected...',
+            ),
+            html.P(
+                children='label: ',
+                id='prompt-label',
+                style={"margin": "0"}
             )
-        ], style={"width": "38%"})
-        ], 
-        style={'display':'flex', 'justify-content':'space-between', 'marginTop': '10px'}
+        ], style={"width": "38%", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center"})
+    ],
+    style={'display':'flex'}
     ),
+
+    html.Div(children=[
+        html.P("Create a prompt template:", style={"marginBottom": "5px"}),
+        dcc.Textarea(
+            id='textarea-prompt',
+            value='{var1} {text}\n\n{var2}',
+            style={'width':'100%', 'height':'75px', 'display':'inline-block', 
+                'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
+        ),
+    ], style={"width": "70%", "marginTop": "10px"}),
+
     html.Div(children=[
         html.Div(
             className='box',
@@ -71,7 +53,7 @@ prompt_engineering = html.Div(children=[
                 html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
                     html.Button('Remove selected variable', id='remove-variable-button')
-                ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px'}),
+                ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
                 dcc.Tabs(content_style={"width": "100%"},
                             parent_style={"width": "100%"},
                             style={'width':'100%'},
@@ -99,18 +81,16 @@ prompt_engineering = html.Div(children=[
     html.Div(children=[
             dcc.Store('prompt-list'),
             html.Button('Generate prompts', id='button-generate-prompts'),
-            html.Button('Test prompts', id='button-test-prompts'),
-            'Select number of samples',
-            html.Div(children=dcc.Dropdown([10, 20, 50], 10, id='select-num-samples'))
+            html.Button('Test prompts', id='button-test-prompts')
         ], 
-        style={'width':'100%', 'marginTop': '15px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
+        style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
     html.Div(id='generated-prompts-container', children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
 
     html.Div(id='tested-prompts-container', children=[
         html.Div(children='test prompt')
-    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
+    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
 
 ])
 
@@ -161,7 +141,7 @@ def generate_prompts(generate_clicks, data, prompt):
     Output('generated-prompts-container', 'children', allow_duplicate=True),
     Input('button-test-prompts', 'n_clicks'),
     Input("dataset-selection", "value"),
-    State('prompt-labels', 'children'),
+    State('prompt-label', 'children'),
     State('prompt-list', 'data'),
     State('prompt-sample', 'children'),
     prevent_initial_call = True
@@ -342,7 +322,6 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
 @callback(
     Output("samples-table", "selectedRows", allow_duplicate=True),
     Output("prompt-sample", "children", allow_duplicate=True),
-    #Output("prompt-labels", "children", allow_duplicate=True),
     Input("button-left", "n_clicks"),
     Input("button-right", "n_clicks"),
     Input("samples-table", "selectedRows"),
