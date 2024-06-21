@@ -81,6 +81,7 @@ prompt_engineering = html.Div(children=[
     ),
     html.Div(children=[
             dcc.Store('prompt-list'),
+            dcc.Store('true-label'),
             html.Button('Generate prompts', id='button-generate-prompts'),
             html.Button('Test prompts', id='button-test-prompts')
         ], 
@@ -142,7 +143,7 @@ def generate_prompts(generate_clicks, data, prompt):
     Output('generated-prompts-container', 'children', allow_duplicate=True),
     Input('button-test-prompts', 'n_clicks'),
     Input("dataset-selection", "value"),
-    State('prompt-labels', 'children'),
+    State('true-label', 'data'),
     State('prompt-list', 'data'),
     State('prompt-sample', 'children'),
     prevent_initial_call = True

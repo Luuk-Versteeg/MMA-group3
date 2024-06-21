@@ -321,6 +321,7 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
 @callback(
     Output("prompt-sample", "children"),
     Output("prompt-label", "children"),
+    Output("true-label", "data"),
     Output("possible-answers", "children"),
     Input("samples-table", "selectedRows"),
     Input("dataset-selection", "value"),
@@ -331,6 +332,7 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
         return (
             html.P("No sample selected..."), 
             "Label of selected sample: no sample selected...", 
+            "",
             "Possible labels: no dataset selected..."
         )
 
@@ -339,5 +341,6 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
     return (
         selected_rows[0]['text'], 
         [html.Span("Label of selected sample: "), html.Span(selected_rows[0]['label'], style={"fontWeight": "bold"})],
+        selected_rows[0]['label'],
         "Possible labels: " + dataset['scheme'],
     )
