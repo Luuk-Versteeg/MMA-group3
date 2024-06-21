@@ -182,7 +182,6 @@ def update_max_samples(dataset_name, dataset_split):
     State("dataset-split", "value"),
 )
 def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
-
     if not dataframe_data:
         fig = go.Figure()
 
@@ -205,55 +204,86 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     
     dataframe = pd.DataFrame.from_dict(dataframe_data)
 
-    words = []
+    words_per_label = {}
     allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
-    for description in dataframe["text"]:
-        # We exclude stop words and only include NP and VP
+    for _, row in dataframe.iterrows():
+        label = row['label']
+        description = row['text']
+        
         tokens = word_tokenize(description)
         tokens_pos = nltk.pos_tag(tokens)
         filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
-        words.extend(filtered_tokens)
 
-    # Count word frequencies
-    word_counts = Counter(words)
-    most_common_words = word_counts.most_common(25)
-    words, counts = zip(*most_common_words)
+        if label not in words_per_label:
+            words_per_label[label] = []
+
+        words_per_label[label].extend(filtered_tokens)
+
+    most_common_words = {}
+    for label, words in words_per_label.items():
+        word_counts = Counter(words)
+        most_common_words[label] = word_counts.most_common(10)
+    
+    all_words = []
+    all_counts = []
+    all_labels = []
+    label_colors = {label: plotly.colors.DEFAULT_PLOTLY_COLORS[i % len(plotly.colors.DEFAULT_PLOTLY_COLORS)] for i, label in enumerate(most_common_words.keys())}
+
+    for label, words in most_common_words.items():
+        for word, count in words:
+            all_words.append(word)
+            all_counts.append(count)
+            all_labels.append(label)
 
     # Normalize counts to a range suitable for font sizes
-    min_size, max_size = 15, 35
-    min_count, max_count = min(counts), max(counts)
+    min_size, max_size = 10, 35
+    min_count, max_count = min(all_counts), max(all_counts)
     
     def normalize(size, min_count, max_count, min_size, max_size):
         if max_count == min_count:  # handle the case when all counts are the same
             return (min_size + max_size) / 2
         return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
 
-    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in counts]
+    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in all_counts]
 
-    # Generate random positions and colors for the word cloud
-    x = [random.random() for _ in range(len(words))]
-    y = [random.random() for _ in range(len(words))]
-    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for _ in range(len(words))]
+    # Generate random positions for the word cloud
+    x = [random.random() for _ in range(len(all_words))]
+    y = [random.random() for _ in range(len(all_words))]
+    colors = [label_colors[label] for label in all_labels]
 
     # Create the word cloud using Plotly
     data = go.Scatter(
         x=x,
         y=y,
         mode='text',
-        text=words,
+        text=all_words,
         marker={'opacity': 0.3},
-        textfont={'size': sizes, 'color': colors}
+        textfont={'size': sizes, 'color': colors},
+        showlegend=False  # Hide the main scatter plot from the legend
     )
 
     fig = go.Figure(data=[data])
 
+    # Add invisible scatter plots for legend entries
+    for label, color in label_colors.items():
+        fig.add_trace(go.Scatter(
+            x=[None],
+            y=[None],
+            mode='markers',
+            marker=dict(size=10, color=color),
+            name=label
+        ))
+
     fig.update_layout(
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        margin=dict(b=0, l=0, r=0, t=0)
+        margin=dict(b=0, l=0, r=0, t=0),
+        showlegend=True,
+        legend=dict(title="Labels", itemsizing='constant')
     )
 
     return fig
+
 
 @callback(
     Output("label-histogram", "figure"),
