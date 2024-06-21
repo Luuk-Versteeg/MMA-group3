@@ -15,10 +15,17 @@ from collections import Counter
 from widgets import histogram
 from dataloaders.load_data import datasets
 
+<<<<<<< Updated upstream
 nltk.download('stopwords', quiet=True)
 nltk.download('brown', quiet=True)
 nltk.download('punkt', quiet=True)
 nltk.download('averaged_perceptron_tagger', quiet=True)
+=======
+# nltk.download('stopwords', quiet=True)
+# nltk.download('brown', quiet=True)
+# nltk.download('punkt', quiet=True)
+# nltk.download('averaged_perceptron_tagger', quiet=True)
+>>>>>>> Stashed changes
 
 stop_words = set(stopwords.words('english'))
 
@@ -199,62 +206,86 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=100)
         )
 
         return fig
     
     dataframe = pd.DataFrame.from_dict(dataframe_data)
-
-    words = []
-    allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
-    for description in dataframe["text"]:
-        # We exclude stop words and only include NP and VP
-        tokens = word_tokenize(description)
-        tokens_pos = nltk.pos_tag(tokens)
-        filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
-        words.extend(filtered_tokens)
-
-    # Count word frequencies
-    word_counts = Counter(words)
-    most_common_words = word_counts.most_common(25)
-    words, counts = zip(*most_common_words)
-
-    # Normalize counts to a range suitable for font sizes
-    min_size, max_size = 15, 35
-    min_count, max_count = min(counts), max(counts)
     
-    def normalize(size, min_count, max_count, min_size, max_size):
-        if max_count == min_count:  # handle the case when all counts are the same
-            return (min_size + max_size) / 2
-        return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
+    allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
+    
+    label_words = {}
+    for label in dataframe['label'].unique():
+        label_data = dataframe[dataframe['label'] == label]
+        words = []
+        for description in label_data["text"]:
+            tokens = word_tokenize(description)
+            tokens_pos = nltk.pos_tag(tokens)
+            filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
+            words.extend(filtered_tokens)
+        word_counts = Counter(words)
+        label_words[label] = word_counts.most_common(5)
+    
+    fig = go.Figure()
 
-    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in counts]
+    colors = plotly.colors.DEFAULT_PLOTLY_COLORS
+    color_map = {label: colors[i % len(colors)] for i, label in enumerate(label_words.keys())}
+    
+    for label, words_counts in label_words.items():
+        words, counts = zip(*words_counts)
+        min_size, max_size = 15, 35
+        min_count, max_count = min(counts), max(counts)
+        
+        def normalize(size, min_count, max_count, min_size, max_size):
+            if max_count == min_count:  # handle the case when all counts are the same
+                return (min_size + max_size) / 2
+            return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
 
-    # Generate random positions and colors for the word cloud
-    x = [random.random() for _ in range(len(words))]
-    y = [random.random() for _ in range(len(words))]
-    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for _ in range(len(words))]
+        sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in counts]
 
-    # Create the word cloud using Plotly
-    data = go.Scatter(
-        x=x,
-        y=y,
-        mode='text',
-        text=words,
-        marker={'opacity': 0.3},
-        textfont={'size': sizes, 'color': colors}
-    )
-
-    fig = go.Figure(data=[data])
+        x = [random.random() for _ in range(len(words))]
+        y = [random.random() for _ in range(len(words))]
+        text_colors = [color_map[label] for _ in range(len(words))]
+        
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode='text',
+                text=words,
+                textfont={'size': sizes, 'color': text_colors},
+                name=label
+            )
+        )
+    
+    legend_items = [html.Span([html.Span(style={'backgroundColor': color_map[label], 'display': 'inline-block', 'width': '10px', 'height': '10px', 'marginRight': '5px'}), label]) for label in color_map]
 
     fig.update_layout(
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        margin=dict(b=0, l=0, r=0, t=0)
+        margin=dict(b=0, l=0, r=0, t=40),
+        title=dict(
+            text="Word Cloud",
+            x=0.5,
+            y=0.95,
+            xanchor='center',
+            yanchor='top'
+        ),
+        annotations=[
+            dict(
+                x=1,
+                y=0.5,
+                xref='paper',
+                yref='paper',
+                showarrow=False,
+                text=html.Div(legend_items, style={'display': 'flex', 'flexDirection': 'column', 'gap': '5px'}).to_plotly_json()
+            )
+        ]
     )
 
     return fig
+
 
 @callback(
     Output("label-histogram", "figure"),
