@@ -1,12 +1,17 @@
 from sklearn import metrics
 import torch
 from transformers import pipeline
-# from tqdm import tqdme
 
-# print("Cuda available?:", torch.cuda.is_available())
+snellius = True
+model = True
 
-torch.cuda.empty_cache()
-model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto")
+if model:
+    if snellius:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device=device) # For on Snellius
+    else:
+        model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto") # For on local machine
+
 
 # def sent_classifier(prompt: str, dataset, n_samples: int, shuffle: bool = True):
 #     if shuffle: dataset = dataset.shuffle()
@@ -48,9 +53,7 @@ model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", 
 #     torch.cuda.empty_cache()    
 #     return predicted_labels, labels
 
-def sent_classifier(prompt: str):    
-    torch.cuda.empty_cache()
-
+def sent_classifier(prompt: str):   
     messages = [
     {
         "role": "system",
@@ -58,16 +61,25 @@ def sent_classifier(prompt: str):
     },
     {f"role": "user", "content": prompt},
     ]
-    prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    
     with torch.no_grad():
-        outputs = model(prompt1, max_new_tokens=100, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
+        prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        outputs = model(prompt1, max_new_tokens=100, do_sample=False)#, temperature=0.7, top_k=50, top_p=0.95)
 
     answer = outputs[0]["generated_text"].split("<|assistant|>")[1]
     answer = answer.lower()
 
     if 'positive' in answer and 'negative' in answer:
         # unkown
-        predicted_label = "Unknown"
+        positive_count = answer.count('positive')
+        negative_count = answer.count('negative')
+        if positive_count > negative_count:
+            predicted_label = "Positive"
+        elif negative_count > positive_count:
+            predicted_label = "Negative"
+        else:
+            predicted_label = "Unknown"
+        # print("beide -", answer)
     elif 'positive' in answer:
         predicted_label = "Positive"
     elif 'negative' in answer:
@@ -75,9 +87,9 @@ def sent_classifier(prompt: str):
     else:
         # unkown
         predicted_label = "Unknown"
-    
-    torch.cuda.empty_cache()    
-    return predicted_label
+        # print("else -", answer)
+       
+    return predicted_label, answer
     
 # def news_classifier(prompt: str, dataset, n_samples: int, shuffle: bool = True):
 #     if shuffle: dataset = dataset.shuffle()
@@ -120,8 +132,6 @@ def sent_classifier(prompt: str):
 #     return predicted_labels, labels
 
 def news_classifier(prompt: str):
-    torch.cuda.empty_cache()
-
     messages = [
     {
         "role": "system",
@@ -130,8 +140,8 @@ def news_classifier(prompt: str):
     {f"role": "user", "content": prompt},
     ]
     
-    prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     with torch.no_grad():
+        prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         outputs = model(prompt1, max_new_tokens=200, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
 
     answer = outputs[0]["generated_text"].split("<|assistant|>")[1]
@@ -148,7 +158,6 @@ def news_classifier(prompt: str):
     else:
         predicted_label = "Unknown"
     
-    torch.cuda.empty_cache()
     return predicted_label
     
 def make_confusion_matrix(y_pred, y_true):
