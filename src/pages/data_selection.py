@@ -348,7 +348,6 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
     return selected_rows[0]['text'], selected_rows[0]['label'], n_samples, dataset['scheme']
 
 
-# New callback for displaying synonyms
 @callback(
     Output("synonyms-output", "children"),
     Input("samples-table", "selectedRows")
@@ -359,14 +358,28 @@ def display_synonyms(selected_rows):
 
     selected_text = selected_rows[0].get('text', '')
     tokens = word_tokenize(selected_text)
-    synonyms_list = []
+    output = []
 
     for token in tokens:
         synonyms = get_synonyms(token)
         if synonyms:
-            synonyms_list.append(html.P(f"{token} -> {', '.join(synonyms)}"))
+            # Pick a random synonym from the list
+            random_synonym = random.choice(synonyms)
+            # Create a span element with tooltip and apply styling
+            token_element = html.Span(
+                token,
+                className='synonym-token',  # CSS class for styling
+                style={'border-bottom': '1px dashed red', 'cursor': 'help'},
+                title=f'Synonym: {random_synonym}'  # Tooltip content
+            )
+            output.append(token_element)
+            output.append(" ")  # Add space between tokens for readability
+        else:
+            output.append(token + " ")  # No tooltip if no synonyms found
 
-    if not synonyms_list:
+    if not output:
         return html.P("No synonyms found...")
 
-    return synonyms_list
+    return html.P(output)
+
+
