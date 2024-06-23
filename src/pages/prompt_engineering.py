@@ -5,6 +5,10 @@ import itertools
 from .tinyllama import sent_classifier, news_classifier, snellius
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import nltk
+from nltk.corpus import wordnet
+nltk.download('wordnet')
+
 
 
 prompt_engineering = html.Div(children=[
@@ -103,40 +107,66 @@ prompt_engineering = html.Div(children=[
     Input('button-generate-prompts', 'n_clicks'),
     State('variant-store', 'data'),
     State('textarea-prompt', 'value'),
-    prevent_initial_call = True
+    prevent_initial_call=True
 )
 def generate_prompts(generate_clicks, data, prompt):
     ctx_id = ctx.triggered_id
     if not ctx_id:
         return [], []
 
+    # Extract variables and create permutations
     vars = []
     for var_num, variants in data.items():
         vars.append([(var_num, var) for var in list(variants.values())])
-    permurations = list(itertools.product(*vars))
+    permutations = list(itertools.product(*vars))
 
     generated_prompts = []
     prompt_list = []
-    for idx, perm in enumerate(permurations, start=1):
+
+    def get_synonym(word):
+        synonyms = wordnet.synsets(word)
+        if synonyms:
+            # Get the first synonym
+            synonym = synonyms[0].lemmas()[0].name()
+            if synonym.lower() != word.lower():
+                return synonym
+        return word
+
+    # Generate prompts for each permutation
+    for idx, perm in enumerate(permutations, start=1):
         new_prompt = prompt
         for variable in perm:
             new_prompt = new_prompt.replace('{var' + variable[0] + '}', variable[1])
-        # Store prompts as strings, later to be used in test_prompts()
+        
+        # Store the prompt string
         prompt_list.append(new_prompt)
 
-        # Convert to list of lines with html.Br() instead of \n.
+        # Convert to list of lines with html.Br() instead of \n, with synonym tooltips
         prompt_lines = []
         for line in new_prompt.split('\n'):
-            prompt_lines.append(line)
+            line_words = line.split()
+            for word in line_words:
+                synonym = get_synonym(word)
+                prompt_lines.append(
+                    html.Span(
+                        word,
+                        style={'cursor': 'pointer'},
+                        title=f'Synonym: {synonym}'
+                    )
+                )
+                prompt_lines.append(' ')  # Add space between words
             prompt_lines.append(html.Br())
-        prompt_lines = prompt_lines[:-1]
+        prompt_lines = prompt_lines[:-1]  # Remove the last html.Br()
 
+        # Create a div for the generated prompt
         generated_prompts.append(html.Div(
-            id={'type': 'generated-prompt', 'index': int(idx)}, 
-            children=prompt_lines, 
-            style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block'}))
+            id={'type': 'generated-prompt', 'index': int(idx)},
+            children=prompt_lines,
+            style={'border': '1px solid #000', 'height': 200, 'width': 200, 'padding': 15, 'boxSizing': 'border-box', 'display': 'inline-block'}
+        ))
 
     return generated_prompts, prompt_list
+
 
 @callback(
     # Output('tested-prompts-container', 'children'),
