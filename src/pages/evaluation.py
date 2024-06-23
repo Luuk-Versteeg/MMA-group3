@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from .tinyllama import sent_classifier, news_classifier, make_confusion_matrix
 from pages.data_selection import select_dataset
-import tqdm
+from tqdm import tqdm
 from collections import defaultdict
 from sklearn.metrics import confusion_matrix
 
@@ -65,30 +65,32 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
     prediction_dict = defaultdict(dict)
     total_per_class = defaultdict(int)
 
-    for sample in samples:
+    for sample_idx, sample in enumerate(samples, start=1):
+        print(f"Sample {sample_idx}/{len(samples)}")
+        
         text = sample['text']
         true_label = sample['label']
         pred_labels = []
         total_per_class[true_label] += 1
 
         # UNCOMMENT THIS TO USE MODEL PREDICTIONS
-        # for i, prompt in enumerate(prompt_list):
-        #     prompt = prompt.format(text=text)
-        #     pred_label = classifier(prompt)            
-        #     pred_labels.append(pred_label)
-
-        #     # Used in the confusion matrix.
-        #     if 'preds' not in prediction_dict[i]:
-        #         prediction_dict[i]['preds'] = []
-        #     prediction_dict[i]['preds'].append((pred_label, true_label))
-
-        ### TEMPORARILY ALWAYS PREDICT BUSINESS
-        for i, prompt in enumerate(prompt_list):
-            pred_label = 'Business'
+        for i, prompt in enumerate(tqdm(prompt_list)):
+            prompt = prompt.format(text=text)
+            pred_label = classifier(prompt)            
             pred_labels.append(pred_label)
+
+            # Used by the confusion matrix.
             if 'preds' not in prediction_dict[i]:
                 prediction_dict[i]['preds'] = []
             prediction_dict[i]['preds'].append((pred_label, true_label))
+
+        ### UNCOMMENT THIS TO TEMPORARILY ALWAYS PREDICT BUSINESS
+        # for i, prompt in enumerate(prompt_list):
+        #     pred_label = 'Business'
+        #     pred_labels.append(pred_label)
+        #     if 'preds' not in prediction_dict[i]:
+        #         prediction_dict[i]['preds'] = []
+        #     prediction_dict[i]['preds'].append((pred_label, true_label))
         ###
                 
         for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, prompt_list)):
