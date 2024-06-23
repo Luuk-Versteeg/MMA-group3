@@ -158,6 +158,7 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         classifier = sent_classifier
 
     pred_labels = []
+
     if snellius:
         with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
             future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
