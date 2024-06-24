@@ -1,6 +1,9 @@
 from dash import html, Output, Input, callback, dcc, State, ctx
 import dash_ag_grid
 import plotly.figure_factory as ff
+import numpy as np
+import nltk
+from nltk.tokenize import word_tokenize
 import plotly.graph_objects as go
 import dash_daq as daq
 import dash_bootstrap_components as dbc
@@ -17,6 +20,7 @@ evaluation = html.Div(children=[
     dcc.Store(id='prompt-predictions'),
     html.H1(children='Evaluation', style={'textAlign':'center'}),
     html.Button('Run prompts', id='run-all-prompts-btn'),
+    html.Div(id='colored-text-output', style={'whiteSpace': 'pre-wrap', 'border': '1px solid #ccc', 'padding': '10px'}),
     dcc.Loading(
         id="loading-1",
         type="default",
@@ -51,6 +55,50 @@ evaluation = html.Div(children=[
                  , style={"marginTop": "30px", "marginBottom": "30px", "width": "500px"})
     ])
 
+def get_attention_colored_text(text, attention_scores):
+    tokens = word_tokenize(text)
+    attention_scores = np.array(attention_scores)
+    min_score, max_score = attention_scores.min(), attention_scores.max()
+    normalized_scores = (attention_scores - min_score) / (max_score - min_score)
+
+    colored_text = ""
+    for token, score in zip(tokens, normalized_scores):
+        color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
+        colored_text += f'<span style="color: {color};">{token} </span>'
+
+    return colored_text
+
+def generate_random_attention_scores(text):
+    tokens = word_tokenize(text)
+    random_scores = np.random.rand(len(tokens))
+    return random_scores
+
+
+# This function returns HTML element that shows attention in color.
+@callback(
+    Output('colored-text-output', 'children'),
+    Input('run-all-prompts-btn', 'n_clicks')
+)
+def display_colored_text(n_clicks):
+    if n_clicks is None:
+        return ""
+    
+    # Currently we use this sample example, replace this with a prompt
+    input_text = "The quick brown fox jumps over the lazy dog."
+
+    
+    attention_scores = generate_random_attention_scores(input_text)
+    tokens = word_tokenize(input_text)
+    normalized_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
+
+    colored_text = []
+    for token, score in zip(tokens, normalized_scores):
+        color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
+        colored_text.append(
+            html.Span(token + " ", style={"color": color})
+        )
+    
+    return colored_text
 
 @callback(
     Output("evaluation-table", "rowData"),

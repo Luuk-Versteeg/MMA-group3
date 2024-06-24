@@ -7,10 +7,9 @@ import pandas as pd
 import plotly
 import random
 import nltk
-from nltk.corpus import stopwords
-from nltk import word_tokenize
+from nltk.corpus import stopwords, wordnet
+from nltk import word_tokenize, pos_tag
 from collections import Counter
-
 
 from widgets import histogram
 from dataloaders.load_data import datasets
@@ -22,9 +21,8 @@ nltk.download('averaged_perceptron_tagger', quiet=True)
 
 stop_words = set(stopwords.words('english'))
 
-
 data_selection = html.Div(children=[
-    html.H1(children='Data selection', style={'textAlign':'center'}),
+    html.H1(children='Data selection', style={'textAlign': 'center'}),
     html.Div(children=[
         html.Div(children=[
             dcc.Store(id='selected-dataset'),
@@ -37,7 +35,7 @@ data_selection = html.Div(children=[
                     html.P(children="(max: )", id="max-samples"),
                     html.Button("Resample", id="resample")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
-                html.P(id="dataset-description"), 
+                html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")
             ]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
@@ -62,7 +60,9 @@ data_selection = html.Div(children=[
         # className='stretchy-widget ag-theme-alpine',
         # style={'width': '', 'height': ''},
         id='samples-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"})
+    ), style={"marginTop": "30px", "marginBottom": "30px"}),
+    # New div for displaying synonyms
+    html.Div(id="synonyms-output", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
 ])
 
 
@@ -72,7 +72,7 @@ def select_dataset(name, datasets=datasets):
 
     if len(dataset) == 0:
         raise KeyError(f"There's no dataset called: {name}")
-    
+
     return dataset[0]
 
 
@@ -83,18 +83,16 @@ def select_dataset(name, datasets=datasets):
     Input("dataset-selection", "value")
 )
 def update_dataset_details(dataset_name):
-
     split = list()
     description = [html.Span("Description: ", style={"fontWeight": "bold"})]
     scheme = [html.Span("Labels: ", style={"fontWeight": "bold"})]
 
     if dataset_name:
         dataset = select_dataset(dataset_name)
-
         split += list(dataset["data"].keys())
         description += dataset["description"]
         scheme += dataset["scheme"]
-    
+
     return split, description, scheme
 
 
@@ -105,18 +103,17 @@ def update_dataset_details(dataset_name):
     Input("n-samples", "value"),
     Input("resample", "n_clicks")
 )
+
+
 def update_selected_dataset(dataset_name, dataset_split, n_samples, n_clicks):
-
     if not dataset_name or not dataset_split:
-        return 
-    
-    dataset = select_dataset(dataset_name)
+        return
 
+    dataset = select_dataset(dataset_name)
     if dataset_split not in dataset["data"].keys():
         return
-    
-    samples = dataset["data"][dataset_split].sample(n_samples)
 
+    samples = dataset["data"][dataset_split].sample(n_samples)
     return samples.to_dict()
 
 
@@ -127,24 +124,31 @@ def update_selected_dataset(dataset_name, dataset_split, n_samples, n_clicks):
     Input("selected-dataset", "data"),
 )
 def update_grid(dataframe_data):
-
     if not dataframe_data:
         return [], [], []
-    
+
     dataframe = pd.DataFrame.from_dict(dataframe_data)
-    
     cols = [{"field": col} for col in dataframe.columns.to_list()]
     rows = dataframe.to_dict("records")
     selected = [rows[0]]
 
     return cols, rows, selected
 
+
+def get_synonyms(word):
+    synonyms = set()
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            if lemma.name() != word:
+                synonyms.add(lemma.name())
+    return list(synonyms)
+
+
 @callback(
     Output("selected-sample", "children"),
     Input("samples-table", "selectedRows")
 )
 def update_sample(selected_rows):
-
     if len(selected_rows) == 0:
         return html.P("No sample selected...")
 
@@ -163,18 +167,15 @@ def update_sample(selected_rows):
     Input("dataset-split", "value"),
 )
 def update_max_samples(dataset_name, dataset_split):
-
     if not dataset_name or not dataset_split:
         return "(max: 0)", 0
-    
-    dataset = select_dataset(dataset_name)
 
+    dataset = select_dataset(dataset_name)
     if dataset_split not in dataset["data"].keys():
         return "(max: 0)", 0
-    
+
     df = dataset["data"][dataset_split]
     max_samples = len(df)
-
     return f"(max: {max_samples})", max_samples
 
 
@@ -185,10 +186,8 @@ def update_max_samples(dataset_name, dataset_split):
     State("dataset-split", "value"),
 )
 def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
-
     if not dataframe_data:
         fig = go.Figure()
-
         fig.update_layout(
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -203,60 +202,85 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-
         return fig
-    
-    dataframe = pd.DataFrame.from_dict(dataframe_data)
 
-    words = []
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
+    words_per_label = {}
     allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
-    for description in dataframe["text"]:
-        # We exclude stop words and only include NP and VP
+    for _, row in dataframe.iterrows():
+        label = row['label']
+        description = row['text']
         tokens = word_tokenize(description)
         tokens_pos = nltk.pos_tag(tokens)
         filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
-        words.extend(filtered_tokens)
+        if label not in words_per_label:
+            words_per_label[label] = []
+        words_per_label[label].extend(filtered_tokens)
 
-    # Count word frequencies
-    word_counts = Counter(words)
-    most_common_words = word_counts.most_common(25)
-    words, counts = zip(*most_common_words)
+    most_common_words = {}
+    for label, words in words_per_label.items():
+        word_counts = Counter(words)
+        most_common_words[label] = word_counts.most_common(10)
+
+    all_words = []
+    all_counts = []
+    all_labels = []
+    label_colors = {label: plotly.colors.DEFAULT_PLOTLY_COLORS[i % len(plotly.colors.DEFAULT_PLOTLY_COLORS)] for i, label in enumerate(most_common_words.keys())}
+
+    for label, words in most_common_words.items():
+        for word, count in words:
+            all_words.append(word)
+            all_counts.append(count)
+            all_labels.append(label)
 
     # Normalize counts to a range suitable for font sizes
-    min_size, max_size = 15, 35
-    min_count, max_count = min(counts), max(counts)
-    
+    min_size, max_size = 10, 35
+    min_count, max_count = min(all_counts), max(all_counts)
     def normalize(size, min_count, max_count, min_size, max_size):
         if max_count == min_count:  # handle the case when all counts are the same
             return (min_size + max_size) / 2
         return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
 
-    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in counts]
+    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in all_counts]
 
-    # Generate random positions and colors for the word cloud
-    x = [random.random() for _ in range(len(words))]
-    y = [random.random() for _ in range(len(words))]
-    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for _ in range(len(words))]
+    # Generate random positions for the word cloud
+    x = [random.random() for _ in range(len(all_words))]
+    y = [random.random() for _ in range(len(all_words))]
+    colors = [label_colors[label] for label in all_labels]
 
     # Create the word cloud using Plotly
     data = go.Scatter(
         x=x,
         y=y,
         mode='text',
-        text=words,
+        text=all_words,
         marker={'opacity': 0.3},
-        textfont={'size': sizes, 'color': colors}
+        textfont={'size': sizes, 'color': colors},
+        showlegend=False  # Hide the main scatter plot from the legend
     )
 
     fig = go.Figure(data=[data])
 
+    # Add invisible scatter plots for legend entries
+    for label, color in label_colors.items():
+        fig.add_trace(go.Scatter(
+            x=[None],
+            y=[None],
+            mode='markers',
+            marker=dict(size=10, color=color),
+            name=label
+        ))
+
     fig.update_layout(
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        margin=dict(b=0, l=0, r=0, t=0)
+        margin=dict(b=0, l=0, r=0, t=0),
+        showlegend=True,
+        legend=dict(title="Labels", itemsizing='constant')
     )
 
     return fig
+
 
 @callback(
     Output("label-histogram", "figure"),
@@ -265,10 +289,8 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     State("dataset-split", "value"),
 )
 def update_label_histogram(dataframe_data, dataset_name, dataset_split):
-
     if not dataframe_data:
         fig = go.Figure()
-
         fig.update_layout(
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -283,15 +305,12 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-
         return fig
-    
-    dataframe = pd.DataFrame.from_dict(dataframe_data)
 
+    dataframe = pd.DataFrame.from_dict(dataframe_data)
     # Create the histogram for the 'class' column
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=dataframe.label))
-
     # Update layout
     fig.update_layout(
         title=f"Distribution of selected samples from {dataset_name} ({dataset_split})",
@@ -314,7 +333,6 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
             )
         ],
     )
-
     return fig
 
 
@@ -337,10 +355,44 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
         )
 
     dataset = select_dataset(dataset_name)
-
     return (
         selected_rows[0]['text'], 
         [html.Span("Label of selected sample: "), html.Span(selected_rows[0]['label'], style={"fontWeight": "bold"})],
         selected_rows[0]['label'],
         "Possible labels: " + dataset['scheme'],
     )
+
+
+@callback(
+    Output("synonyms-output", "children"),
+    Input("samples-table", "selectedRows")
+)
+def display_synonyms(selected_rows):
+    if len(selected_rows) == 0:
+        return html.P("No sample selected...")
+
+    selected_text = selected_rows[0].get('text', '')
+    tokens = word_tokenize(selected_text)
+    output = []
+
+    for token in tokens:
+        synonyms = get_synonyms(token)
+        if synonyms:
+            # Pick a random synonym from the list
+            random_synonym = random.choice(synonyms)
+            # Create a span element with tooltip and apply styling
+            token_element = html.Span(
+                token,
+                className='synonym-token',  # CSS class for styling
+                style={'border-bottom': '1px dashed red', 'cursor': 'help'},
+                title=f'Synonym: {random_synonym}'  # Tooltip content
+            )
+            output.append(token_element)
+            output.append(" ")  # Add space between tokens for readability
+        else:
+            output.append(token + " ")  # No tooltip if no synonyms found
+
+    if not output:
+        return html.P("No synonyms found...")
+
+    return html.P(output)
