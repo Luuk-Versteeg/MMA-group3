@@ -7,7 +7,8 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import nltk
 from nltk.corpus import wordnet
-nltk.download('wordnet')
+
+nltk.download('wordnet', quiet=True)
 
 
 
@@ -59,12 +60,13 @@ prompt_engineering = html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
                     html.Button('Remove selected variable', id='remove-variable-button')
                 ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
-                dcc.Tabs(content_style={"width": "100%"},
-                            parent_style={"width": "100%"},
-                            style={'width':'100%'},
-                            id="variable-container", children=[], vertical=True),
+                dcc.Tabs(
+                    content_style={"width": "100%"},
+                    parent_style={"width": "100%"},
+                    style={'width':'100%'},
+                    id="variable-container", children=[], vertical=True),
             ],
-            style={'width':'47%'},
+            style={'width':'47%', 'overflowY': 'scroll'},
         ),
         html.Div(
             className='box',
@@ -74,11 +76,10 @@ prompt_engineering = html.Div(children=[
                     children=[html.Button('Add variant', id='add-variant-button', n_clicks=0)],
                     style={'display':'flex', 'justify-content':'center', 'padding': '10px 20px'}
                 ),
-                html.Div(id='variant-container', children=[
-                ]),
+                html.Div(id='variant-container', children=[], style={"marginBottom": "15px"}),
                 dcc.Store(id='variant-store', data=defaultdict(dict))
             ],
-            style={'width':'47%', 'display':'inline-block'},
+            style={'width':'47%', 'overflowY': 'scroll'},
         )
         ],
         style={'display':'flex', 'justify-content':'space-between', 'marginTop': '20px', 'height': '250px'}
@@ -253,20 +254,20 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
             idx += 1
         all_variants[tabs_state][idx] = f"Variant {idx}"
 
-        new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
+        new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'77% 20%', 'justifyContent': 'space-between', 'height':40, 'padding': '5px 15px'}, children=[
             dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
                     value=all_variants[tabs_state][idx],
-                    type='text'),
+                    type='text',
+                    style={"paddingLeft": "15px"}),
             html.Button('X', id={'type': 'variant-button-delete', 'index': f"{tabs_state}-{idx}"}),
         ])
         variants.append(new_variant)
     # Add variables.
     elif ctx_id == 'variable-container':
         if pressed_tab in all_variants:
-            vars = [html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
-                dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
-                        value=val,
-                        type='text'),
+            vars = [html.Div(style={'display':'grid', 'grid-template-columns':'77% 20%', 'justifyContent': 'space-between', 'height': "40px",'padding': '5px 15px'}, children=[
+                dcc.Input(id={'type': 'variant-input', 'index': int(idx)}, value=val, type='text',
+                          style={"paddingLeft": "15px"}),
                 html.Button('X', id={'type': 'variant-button-delete', 'index': f"{pressed_tab}-{idx}"}),
             ]) for idx, val in all_variants[pressed_tab].items()]
 

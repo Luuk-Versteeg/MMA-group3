@@ -85,8 +85,8 @@ def select_dataset(name, datasets=datasets):
 def update_dataset_details(dataset_name):
 
     split = list()
-    description = "Description: "
-    scheme = "Labels: "
+    description = [html.Span("Description: ", style={"fontWeight": "bold"})]
+    scheme = [html.Span("Labels: ", style={"fontWeight": "bold"})]
 
     if dataset_name:
         dataset = select_dataset(dataset_name)
