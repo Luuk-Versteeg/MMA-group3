@@ -135,7 +135,7 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
         # UNCOMMENT THIS TO USE MODEL PREDICTIONS
         for i, prompt in enumerate(tqdm(prompt_list)):
             prompt = prompt.format(text=text)
-            pred_label = classifier(prompt)            
+            pred_label, _ = classifier(prompt)            
             pred_labels.append(pred_label)
 
             # Used by the confusion matrix.

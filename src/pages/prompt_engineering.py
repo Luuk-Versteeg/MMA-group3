@@ -1,7 +1,6 @@
 from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
-
 from .tinyllama import sent_classifier, news_classifier, snellius
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,6 +10,8 @@ from nltk.corpus import wordnet
 nltk.download('wordnet', quiet=True)
 
 import os
+import numpy as np
+
 progress_file = os.path.abspath('src/pages/progress.txt')
 
 
@@ -89,6 +90,7 @@ prompt_engineering = html.Div(children=[
     html.Div(children=[
             dcc.Store('prompt-list'),
             dcc.Store('true-label'),
+            dcc.Store('results-dict'),
             html.Button('Generate prompts', id='button-generate-prompts'),
             html.Button('Test prompts', id='button-test-prompts'),
         ], 
@@ -104,9 +106,19 @@ prompt_engineering = html.Div(children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
 
     html.Div(id='tested-prompts-container', children=[
-        html.Div(children='test prompt')
-    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
-
+        #html.Div(children='test prompt')
+    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
+    
+    html.Div(style={'width': '100%'}, children=[
+        html.Div('Prompt:', id='full-prompt', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px'}),
+        html.Div(style={
+            'width': '100%',
+            'height': '1px',
+            'background-color': '#000',  # Black color for the line
+            'margin': '10px 0'  # Adjust margin as needed
+        }),
+        html.Div('Answer:', id='full-answer', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px'})
+    ])
 ])
 
 
@@ -197,6 +209,7 @@ def clear_progressfile():
 @callback(
     # Output('tested-prompts-container', 'children'),
     Output('generated-prompts-container', 'children', allow_duplicate=True),
+    Output('results-dict','data'),
     Input('button-test-prompts', 'n_clicks'),
     Input("dataset-selection", "value"),
     State('true-label', 'data'),
@@ -206,7 +219,7 @@ def clear_progressfile():
 )
 def test_prompts(test_button, dataset_name, true_label, generated_prompts, text):
     if not test_button:
-        return []
+        return [], {}
 
     if dataset_name == "AG News":
         classifier = news_classifier
@@ -214,6 +227,8 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         classifier = sent_classifier
 
     pred_labels = []
+    pred_words = []
+    pred_attentions = []
     n_total = len(generated_prompts)
     clear_progressfile()
 
@@ -223,17 +238,25 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
             for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
                 label, words, att_data = future.result()
                 pred_labels.append(label)
+                pred_words.append(words)
+                pred_attentions.append(att_data)
                 update_progressfile(((i+1)/n_total)*100)
     else:
         for i, prompt in tqdm(enumerate(generated_prompts)):
             prompt = prompt.format(text=text)
             pred_label, words, att_data = classifier(prompt)
             pred_labels.append(pred_label)
+            pred_words.append(words)
+            pred_attentions.append(att_data)
             update_progressfile(((i+1)/n_total)*100)
+
+    results_dict = {}
 
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
-    for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
+    for idx, (pred_label, pred_word, pred_attention, new_prompt) in enumerate(zip(pred_labels, pred_words, pred_attentions, generated_prompts)):
+        results_dict[idx] = [new_prompt, pred_label, pred_word, pred_attention]
+        
         if pred_label == true_label:
             color='LightGreen' 
         else:
@@ -247,10 +270,55 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
 
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
-            children=prompt_lines, 
+            children=prompt_lines + [html.Button('Attention', id={'type': 'prompt-attention-button', 'index': int(idx)})],
             style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color}))
 
-    return colored_prompt_divs
+    return colored_prompt_divs, results_dict
+
+
+@callback(
+    Output('full-prompt', 'children'),
+    Output('full-answer', 'children'),
+    Input({'type': 'prompt-attention-button', 'index': dependencies.ALL}, 'n_clicks'),
+    Input({'type': 'token', 'index': dependencies.ALL}, 'n_clicks'),
+    State('results-dict','data'),
+    State('full-prompt', 'children'),
+    State('full-answer', 'children')
+)
+def show_answer(prompt_clicks, token_clicks, results_dict, full_prompt, full_answer):
+    ctx_id = ctx.triggered_id
+
+    # Pressed on output token.
+    if ctx_id['type'] == 'token':
+        print("Pressed token:", ctx_id['index'])
+
+        prompt_idx, clicked_token = ctx_id['index'].split("-")
+
+        scores_lists = results_dict[str(prompt_idx)][3]
+        answer_tokens = results_dict[str(prompt_idx)][2]
+
+        for att_token, attention_scores in scores_lists:
+            # Find the clicked token in the nested list of attentions.
+            if att_token == clicked_token:
+                attention_scores = np.array(attention_scores)
+                normalized_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
+
+                colored_text = []
+                for token, score in zip(answer_tokens, normalized_scores):
+                    color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
+                    colored_text.append(
+                        html.Span(token,
+                                  id={'type':'token', 'index':f"{prompt_idx}-{token}"},
+                                  style={"color": color, 'margin-right': '5px', 'cursor': 'pointer'})
+                    )
+                
+                return full_prompt, colored_text
+    # Pressed attention button.
+    else:
+        prompt = results_dict[str(ctx_id['index'])][0]
+        answer_tokens = results_dict[str(ctx_id['index'])][2]
+        
+        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}-{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
 
 
 @callback(
@@ -304,7 +372,6 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
             variants = []
 
     return variants, all_variants
-
 
 
 @callback(
