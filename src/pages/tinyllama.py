@@ -13,20 +13,19 @@ if model:
     else:
         model = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto") # For on local machine
 
+
 def sent_classifier(prompt: str):   
-    messages = [
+    message = [
     {
         "role": "system",
         "content": "You classify sentences as possitive or negative.",
     },
-    {f"role": "user", "content": prompt},
+    {"role": "user", "content": prompt},
     ]
     
-    with torch.no_grad():
-        prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        outputs = model(prompt1, max_new_tokens=100, do_sample=False)#, temperature=0.7, top_k=50, top_p=0.95)
+    out, words, att_data = ask_model(message)
 
-    answer = outputs[0]["generated_text"].split("<|assistant|>")[1]
+    answer = out[0]["generated_text"].split("<|assistant|>")[1]
     answer = answer.lower()
 
     if 'positive' in answer and 'negative' in answer:
@@ -52,19 +51,17 @@ def sent_classifier(prompt: str):
     return predicted_label, answer
 
 def news_classifier(prompt: str):
-    messages = [
+    message = [
     {
         "role": "system",
         "content": "You classify sentences, you indicate in which part of the newspaper they appear, the possible sections are given to you by the prompt.",
     },
-    {f"role": "user", "content": prompt},
+    {"role": "user", "content": prompt},
     ]
-    
-    with torch.no_grad():
-        prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        outputs = model(prompt1, max_new_tokens=200, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
 
-    answer = outputs[0]["generated_text"].split("<|assistant|>")[1]
+    out, words, att_data = ask_model(message)
+    
+    answer = out[0]["generated_text"].split("<|assistant|>")[1]
     answer = answer.lower()
 
     if 'world news' in answer:
@@ -82,6 +79,19 @@ def news_classifier(prompt: str):
     
 def make_confusion_matrix(y_pred, y_true):
     return metrics.confusion_matrix(y_true, y_pred)
+
+
+def ask_model(message, model=model):
+    with torch.no_grad():
+        prompt1 = model.tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+
+        # CHANGE PARAMETERS IF NEEDED HERE
+        out, seq_in, seq_out, scores = generate(model, prompt1, max_new_tokens=100, do_sample=False)
+
+        words, att_matrix = process_attentions(seq_in, seq_out, scores, model)
+        att_data = select_prompt_attention(words, att_matrix)
+    
+    return out, words, att_data
 
 
 def generate(pipe, prompt, **generate_kwargs):
@@ -174,7 +184,6 @@ def process_attentions(seq_in, seq_out, scores, pipe):
         words.append(word)
 
         attention = score.mean(dim=[0,1]).float().numpy()
-        # attention = score[0,0,:,:].float().numpy()
 
         if index == 0:
             att_matrix[:d_in, :d_in] = attention
@@ -182,54 +191,9 @@ def process_attentions(seq_in, seq_out, scores, pipe):
             i = (d_in -1 + index)
             att_matrix[i:(i+ 1),:i+1] = attention
 
-        # o.append([word, attention])
-
     words = [pipe.tokenizer.decode(t) for t in seq_in] + words
 
     return words, att_matrix
-
-
-    # find = "Serve hot"
-    # needle = pipe.preprocess(find)["input_ids"].squeeze()
-
-    # in_seq = input["input_ids"].squeeze()
-    # out_seq = generated_sequence.squeeze()
-
-
-    # import pdb; pdb.set_trace()
-
-    # index = find_subsequence(out_seq, needle)
-
-    # if index == -1:
-    #     print("Couldn't find the needle...")
-    #     exit()
-
-
-    # # size [22,32,1,X-1]
-    # score = scores[index - len(in_seq) - 1]
-
-
-    # previous_seq = out_seq[:index]
-
-    # tokens = [pipe.tokenizer.decode(token) for token in previous_seq]
-
-    # numpy_score = score.float().numpy()
-
-    # [[token, sco] for token, sco in zip(tokens, numpy_score)]
-
-    # att_text = pipe.tokenizer.decode(previous_seq)
-
-    # IMPORTANT: Generation script
-    # pipe.model.generate(pipe.preprocess(prompt)["input_ids"], output_attentions=True, max_time=15., do_sample=True, return_dict_in_generate=True)
-
-    # pipe.model.generate(pipe.preprocess(prompt)["input_ids"], output_attentions=True, return_dict_in_generate=True)
-
-    # from transformers import AutoModel, PreTrainedTokenizerFast
-
-    # model = AutoModel.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-    # tokenizer = PreTrainedTokenizerFast.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-
-    # import pdb; pdb.set_trace()
 
 
 def find_subsequence(main_seq, sub_seq):
@@ -257,32 +221,3 @@ def select_prompt_attention(words, att_matrix):
         att_data.append([word, att_matrix[index].tolist()])
 
     return att_data
-
-
-
-if __name__ == "__main__":
-
-    prompt = "This is a test"
-
-    messages = [
-    {
-        "role": "system",
-        "content": "You classify sentences, you indicate in which part of the newspaper they appear, the possible sections are given to you by the prompt.",
-    },
-    {"role": "user", "content": prompt},
-    ]
-    
-    with torch.no_grad():
-        prompt1 = model.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        # prompt1 = model.tokenizer.encode(prompt)
-        out, seq_in, seq_out, scores = generate(model, prompt1, max_new_tokens=100, do_sample=False)
-
-        words, att_matrix = process_attentions(seq_in, seq_out, scores, model)
-        att_data = select_prompt_attention(words, att_matrix)
-
-        import pdb; pdb.set_trace()
-
-        # prompt_tokens = model.tokenizer.encode(prompt)
-
-
-    import pdb; pdb.set_trace()

@@ -195,12 +195,12 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
             future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
             total_prompts = len(generated_prompts)
             for future in tqdm(as_completed(future_to_prompt), total=total_prompts):
-                label, answer = future.result()
+                label, words, att_data = future.result()
                 pred_labels.append(label)
     else:
         for prompt in tqdm(generated_prompts):
             prompt = prompt.format(text=text)
-            pred_label, answer = classifier(prompt)
+            pred_label, words, att_data = classifier(prompt)
             pred_labels.append(pred_label)
 
     # Convert to list of lines with html.Br() instead of \n.
