@@ -207,9 +207,9 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     colored_prompt_divs = []
     for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
         if pred_label == true_label:
-            color='green' 
+            color='LightGreen' 
         else:
-            color='red'
+            color='LightCoral'
         prompt_lines = []
         for line in new_prompt.split('\n'):
             prompt_lines.append(line)
