@@ -117,7 +117,7 @@ prompt_engineering = html.Div(children=[
             'background-color': '#000',  # Black color for the line
             'margin': '10px 0'  # Adjust margin as needed
         }),
-        html.Div('Answer:', id='full-answer', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px'})
+        html.Div('Answer:', id='full-answer', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
     ])
 ])
 
@@ -294,7 +294,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
     # Pressed on output token.
     if ctx_id['type'] == 'token':
 
-        prompt_idx, clicked_pos, clicked_token = ctx_id['index'].split("-")
+        prompt_idx, clicked_pos, clicked_token = ctx_id['index'].split("---")
         clicked_pos = int(clicked_pos)
 
         scores_lists = results_dict[str(prompt_idx)][3]
@@ -317,7 +317,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
             colored_text.append(
                 html.Span(token,
-                          id={'type':'token', 'index':f"{prompt_idx}-{i}-{token}"},
+                          id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"},
                           style=style)
             )
         
@@ -327,7 +327,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens = results_dict[str(ctx_id['index'])][2]
         
-        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}-{i}-{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
 
 @callback(
     Output('variant-container', 'children'),
