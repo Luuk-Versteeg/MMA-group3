@@ -293,35 +293,41 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
     # Pressed on output token.
     if ctx_id['type'] == 'token':
-        print("Pressed token:", ctx_id['index'])
 
-        prompt_idx, clicked_token = ctx_id['index'].split("-")
+        prompt_idx, clicked_pos, clicked_token = ctx_id['index'].split("-")
+        clicked_pos = int(clicked_pos)
 
         scores_lists = results_dict[str(prompt_idx)][3]
         answer_tokens = results_dict[str(prompt_idx)][2]
 
-        for att_token, attention_scores in scores_lists:
-            # Find the clicked token in the nested list of attentions.
-            if att_token == clicked_token:
-                attention_scores = np.array(attention_scores)
-                normalized_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
+        attention_scores = scores_lists[clicked_pos][1]
 
-                colored_text = []
-                for token, score in zip(answer_tokens, normalized_scores):
-                    color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
-                    colored_text.append(
-                        html.Span(token,
-                                  id={'type':'token', 'index':f"{prompt_idx}-{token}"},
-                                  style={"color": color, 'margin-right': '5px', 'cursor': 'pointer'})
-                    )
-                
-                return prompt, colored_text
+        print(f"{clicked_token}{attention_scores}")
+        attention_scores = np.array(attention_scores)
+        normalized_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
+
+        colored_text = []
+        for i, (token, score) in enumerate(zip(answer_tokens, normalized_scores)):
+            color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
+
+            style={"color": color, 'margin-right': '5px', 'cursor': 'pointer'}
+            if i == clicked_pos:
+                style['textDecoration'] =  'underline'
+                style['fontWeight'] = 'bold'
+
+            colored_text.append(
+                html.Span(token,
+                          id={'type':'token', 'index':f"{prompt_idx}-{i}-{token}"},
+                          style=style)
+            )
+        
+        return prompt, colored_text
     # Pressed attention button.
     else:
         prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens = results_dict[str(ctx_id['index'])][2]
         
-        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}-{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}-{i}-{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
 
 @callback(
     Output('variant-container', 'children'),
