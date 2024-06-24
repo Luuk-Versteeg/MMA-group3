@@ -221,13 +221,13 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
             future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
             for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
-                label, answer = future.result()
+                label, words, att_data = future.result()
                 pred_labels.append(label)
                 update_progressfile(((i+1)/n_total)*100)
     else:
         for i, prompt in tqdm(enumerate(generated_prompts)):
             prompt = prompt.format(text=text)
-            pred_label, answer = classifier(prompt)
+            pred_label, words, att_data = classifier(prompt)
             pred_labels.append(pred_label)
             update_progressfile(((i+1)/n_total)*100)
 
@@ -235,9 +235,9 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     colored_prompt_divs = []
     for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
         if pred_label == true_label:
-            color='green' 
+            color='LightGreen' 
         else:
-            color='red'
+            color='LightCoral'
         prompt_lines = []
         for line in new_prompt.split('\n'):
             prompt_lines.append(line)
