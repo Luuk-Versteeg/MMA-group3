@@ -48,7 +48,7 @@ def sent_classifier(prompt: str):
         predicted_label = "Unknown"
         # print("else -", answer)
        
-    return predicted_label, answer
+    return predicted_label, words, att_data
 
 def news_classifier(prompt: str):
     message = [
@@ -75,7 +75,7 @@ def news_classifier(prompt: str):
     else:
         predicted_label = "Unknown"
     
-    return predicted_label, answer
+    return predicted_label, words, att_data
     
 def make_confusion_matrix(y_pred, y_true):
     return metrics.confusion_matrix(y_true, y_pred)
