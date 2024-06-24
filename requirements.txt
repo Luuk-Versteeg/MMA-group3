@@ -18,3 +18,4 @@ torch
 accelerate
 transformers
 scikit-learn
+dash_daq
