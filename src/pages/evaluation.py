@@ -15,22 +15,31 @@ evaluation = html.Div(children=[
     dcc.Store(id='prompt-predictions'),
     html.H1(children='Evaluation', style={'textAlign':'center'}),
     html.Button('Run prompts', id='run-all-prompts-btn'),
-    html.Div(children=dash_ag_grid.AgGrid(
-        columnDefs=[],
-        rowData=[],
-        columnSize="responsiveSizeToFit",
-        dashGridOptions={
-            "pagination": False,
-            "paginationAutoPageSize": True,
-            "suppressCellFocus": True,
-            "rowSelection": "multiple",
-        },
-        selectedRows=[],
-        # defaultColDef={"filter": "agTextColumnFilter"},
-        # className='stretchy-widget ag-theme-alpine',
-        # style={'width': '', 'height': ''},
-        id='evaluation-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"}),
+    dcc.Loading(
+        id="loading-1",
+        type="default",
+        children=html.Div(id="loading-output-1")
+    ),
+    dcc.Loading(
+        html.Div(children=dash_ag_grid.AgGrid(
+            columnDefs=[],
+            rowData=[],
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={
+                "pagination": False,
+                "paginationAutoPageSize": True,
+                "suppressCellFocus": True,
+                "rowSelection": "multiple",
+            },
+            selectedRows=[],
+            # defaultColDef={"filter": "agTextColumnFilter"},
+            # className='stretchy-widget ag-theme-alpine',
+            # style={'width': '', 'height': ''},
+            id='evaluation-table'
+        ), 
+        style={"marginTop": "30px", "marginBottom": "30px"}),
+        id="loading-evaluation"
+    ),
     html.Div(id="confusion-matrix-container", 
              children=dcc.Graph(
                  id="confusion-matrix",
@@ -91,7 +100,7 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
         #     if 'preds' not in prediction_dict[i]:
         #         prediction_dict[i]['preds'] = []
         #     prediction_dict[i]['preds'].append((pred_label, true_label))
-        ###
+        ##
                 
         for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, prompt_list)):
             if true_label not in prediction_dict[idx]:
