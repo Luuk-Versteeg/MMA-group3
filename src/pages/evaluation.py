@@ -42,9 +42,7 @@ evaluation = html.Div(children=[
         style={"marginTop": "30px", "marginBottom": "30px"}),
         id="loading-evaluation"
     ),
-    html.Div(id="eval-prompts-container", style={'width':'100%',  "border": "1px solid black", 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}, children=[
-        html.Div(style={"width":150, "height":20, "padding":"15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
-    ]),
+    html.Div(id="eval-prompts-container", style={'width':'100%',  "border": "1px solid black", 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}, children=[]),
     html.Div(id="confusion-matrix-container", 
              children=dcc.Graph(
                  id="confusion-matrix",
@@ -87,25 +85,25 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
         total_per_class[true_label] += 1
 
         # UNCOMMENT THIS TO USE MODEL PREDICTIONS
-        # for i, prompt in enumerate(tqdm(prompt_list)):
-        #     prompt = prompt.format(text=text)
-        #     pred_label = classifier(prompt)            
-        #     pred_labels.append(pred_label)
-
-        #     # Used by the confusion matrix.
-        #     if 'preds' not in prediction_dict[i]:
-        #         prediction_dict[i]['preds'] = []
-        #     prediction_dict[i]['preds'].append((pred_label, true_label))
-
-        ### UNCOMMENT THIS TO TEMPORARILY ALWAYS PREDICT BUSINESS
-        for i, prompt in enumerate(prompt_list):
-            pred_label = 'Business'
+        for i, prompt in enumerate(tqdm(prompt_list)):
+            prompt = prompt.format(text=text)
+            pred_label = classifier(prompt)            
             pred_labels.append(pred_label)
+
+            # Used by the confusion matrix.
             if 'preds' not in prediction_dict[i]:
                 prediction_dict[i]['preds'] = []
             prediction_dict[i]['preds'].append((pred_label, true_label))
+
+        ### UNCOMMENT THIS TO TEMPORARILY ALWAYS PREDICT BUSINESS
+        # for i, prompt in enumerate(prompt_list):
+        #     pred_label = 'Business'
+        #     pred_labels.append(pred_label)
+        #     if 'preds' not in prediction_dict[i]:
+        #         prediction_dict[i]['preds'] = []
+        #     prediction_dict[i]['preds'].append((pred_label, true_label))
         ##
-                
+
         for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, prompt_list)):
             if true_label not in prediction_dict[idx]:
                 prediction_dict[idx][true_label] = 0
@@ -117,8 +115,6 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
             else: 
                 if true_label == pred_label:
                     prediction_dict[idx][true_label] += 1
-
-        
         
     labels = select_dataset(dataset_name)['scheme'].split(", ")
     colDefs = [{'field':'#'}, {"field":"Prompt"}, {"field":"Total Correct"}]
@@ -178,7 +174,7 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-        return fig
+        return fig, []
 
     predicted_labels = []
     gt_labels = []
@@ -211,8 +207,6 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
         )
 
         prompt_container_children.append(prompt_div)
-
-
 
     labels = select_dataset(dataset_name)['scheme'].split(", ")
     cm = confusion_matrix(gt_labels, predicted_labels, labels=labels)
