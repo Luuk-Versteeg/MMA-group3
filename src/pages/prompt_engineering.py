@@ -63,9 +63,9 @@ prompt_engineering = html.Div(children=[
                     html.Button('Remove selected variable', id='remove-variable-button')
                 ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
                 dcc.Tabs(
-                    content_style={"width": "100%"},
-                    parent_style={"width": "100%"},
-                    style={'width':'100%'},
+                    content_style={"width": "100%", 'flex-direction':'column'},
+                    parent_style={"width": "100%",'flex-direction':'column'},
+                    style={'width':'100%', 'flex-direction':'column'},
                     id="variable-container", children=[], vertical=True),
             ],
             style={'width':'47%', 'overflowY': 'scroll'},
@@ -370,8 +370,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
         new_tab_value = f'{new_index}'
         new_tab = dcc.Tab(label=f'var{new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
-                          style={'width':'100%', 'line-width': '100%'},
-                          selected_style={'width':'100%', 'line-width': '100%'})
+                          style={'line-width': '100%', 'flex-grow': 1},
+                          selected_style={'line-width': '100%'})
         tabs.append(new_tab)
         active_tab = new_tab_value
 
