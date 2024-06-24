@@ -26,3 +26,23 @@ body {
     border-bottom: 1px dashed red;
     cursor: help;
 }
+
+.progress {
+    display: flex;
+    height: 1rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    background-color: #ff0000;
+    border-radius: 0.25rem;
+}
+
+.progress-bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    background-color: #00ff08;
+    transition: width 0.6s ease;
+}

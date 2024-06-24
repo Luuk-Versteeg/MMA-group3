@@ -14,10 +14,11 @@ from collections import Counter
 from widgets import histogram
 from dataloaders.load_data import datasets
 
-# nltk.download('stopwords')
-# nltk.download('brown')
-# nltk.download('punkt')
-# nltk.download('averaged_perceptron_tagger')
+nltk.download('stopwords', quiet=True)
+nltk.download('brown', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
+
 stop_words = set(stopwords.words('english'))
 
 data_selection = html.Div(children=[
@@ -31,7 +32,8 @@ data_selection = html.Div(children=[
                 html.P(children=[
                     html.P(children="Select the number of samples:"),
                     dbc.Input(type="number", min=0, value=10, max=100, step=1, id="n-samples"),
-                    html.P(children="(max: )", id="max-samples")
+                    html.P(children="(max: )", id="max-samples"),
+                    html.Button("Resample", id="resample")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
                 html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")
@@ -82,8 +84,8 @@ def select_dataset(name, datasets=datasets):
 )
 def update_dataset_details(dataset_name):
     split = list()
-    description = "Description: "
-    scheme = "Scheme: "
+    description = [html.Span("Description: ", style={"fontWeight": "bold"})]
+    scheme = [html.Span("Labels: ", style={"fontWeight": "bold"})]
 
     if dataset_name:
         dataset = select_dataset(dataset_name)
@@ -99,8 +101,11 @@ def update_dataset_details(dataset_name):
     Input("dataset-selection", "value"),
     Input("dataset-split", "value"),
     Input("n-samples", "value"),
+    Input("resample", "n_clicks")
 )
-def update_selected_dataset(dataset_name, dataset_split, n_samples):
+
+
+def update_selected_dataset(dataset_name, dataset_split, n_samples, n_clicks):
     if not dataset_name or not dataset_split:
         return
 
@@ -333,19 +338,29 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
 
 @callback(
     Output("prompt-sample", "children"),
-    Output("prompt-labels", "children"),
-    Output("select-num-samples", "value"),
-    Output("possible-answers", "value"),
+    Output("prompt-label", "children"),
+    Output("true-label", "data"),
+    Output("possible-answers", "children"),
     Input("samples-table", "selectedRows"),
     Input("dataset-selection", "value"),
     Input("n-samples", "value")
 )
 def update_prompt_sample(selected_rows, dataset_name, n_samples):
     if len(selected_rows) == 0:
-        return html.P("No sample selected..."), "labels: ", [0], ''
+        return (
+            html.P("No sample selected..."), 
+            "Label of selected sample: no sample selected...", 
+            "",
+            "Possible labels: no dataset selected..."
+        )
 
     dataset = select_dataset(dataset_name)
-    return selected_rows[0]['text'], selected_rows[0]['label'], n_samples, dataset['scheme']
+    return (
+        selected_rows[0]['text'], 
+        [html.Span("Label of selected sample: "), html.Span(selected_rows[0]['label'], style={"fontWeight": "bold"})],
+        selected_rows[0]['label'],
+        "Possible labels: " + dataset['scheme'],
+    )
 
 
 @callback(
@@ -381,5 +396,3 @@ def display_synonyms(selected_rows):
         return html.P("No synonyms found...")
 
     return html.P(output)
-
-

@@ -1,23 +1,17 @@
 from dash import html, dcc, Output, Input, State, ctx, callback, dependencies
 from collections import defaultdict
 import itertools
-import plotly.graph_objects as go
-import dash_ag_grid
 
-
-import plotly
-import random
-import nltk
-from nltk.corpus import stopwords
-from collections import Counter
-from pages.data_selection import select_dataset
-
-
-from widgets import histogram
-from dataloaders.load_data import datasets
-
-from .tinyllama import sent_classifier, news_classifier
+from .tinyllama import sent_classifier, news_classifier, snellius
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import nltk
+from nltk.corpus import wordnet
+
+nltk.download('wordnet', quiet=True)
+
+import os
+progress_file = os.path.abspath('src/pages/progress.txt')
 
 
 prompt_engineering = html.Div(children=[
@@ -29,41 +23,37 @@ prompt_engineering = html.Div(children=[
                 html.Button('<', id='button-left', style={"padding": "30px"}),
                 html.Div(id="prompt-sample", 
                          children=" Improved Pitching Has the Keys Finishing on an Upswing As the season winds down for the Frederick Keys, Manager Tom Lawless is starting to enjoy the progress his pitching staff has made this season.",
-                         style={"padding": "15px 30px", "border": "1px solid black"}),
+                         style={"padding": "15px 30px", "border": "1px solid black", "width": "100%", 
+                                "minHeight": "100px", "display": "flex", "alignItems": "center", "justifyContent": "center"}),
                 html.Button('>', id='button-right', style={"padding": "30px"})
             ],
             style={'width':'60%', 'display':'flex', 'gap': '20px', 'alignItems': "center"},
         ),
-        html.Div(
-            children='labels: ',
-            style={'width':'35%', 'height':100, 'display':'inline-block'},
-            id='prompt-labels'
-        )
-    ],
-    style={'display':'flex', 'justify-content':'space-between'}
-    ),
-    html.Div(children=[
         html.Div(children=[
-            html.P("Create a prompt template:", style={"marginBottom": "5px"}),
-            dcc.Textarea(
-                id='textarea-prompt',
-                value='{var1} {text}\n\n{var2}',
-                style={'width':'100%', 'height':'75px', 'display':'inline-block', 
-                    'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
-            ),
-        ], style={"width": "58%"}),
-        html.Div(children=[
-            html.P("Possible answers:", style={"marginBottom": "5px"}),
-            dcc.Input(
+            html.P(
                 id='possible-answers',
-                value='Business, World, Science, Sports',
-                type='text',
-                style={'width':'100%', 'height': '30px', 'display': 'inline-block'},
+                children='No dataset selected...',
+            ),
+            html.P(
+                children='label: ',
+                id='prompt-label',
+                style={"margin": "0"}
             )
-        ], style={"width": "38%"})
-        ], 
-        style={'display':'flex', 'justify-content':'space-between', 'marginTop': '10px'}
+        ], style={"width": "38%", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center"})
+    ],
+    style={'display':'flex'}
     ),
+
+    html.Div(children=[
+        html.P("Create a prompt template:", style={"marginBottom": "5px"}),
+        dcc.Textarea(
+            id='textarea-prompt',
+            value='{var1} {text}\n\n{var2}',
+            style={'width':'100%', 'height':'75px', 'display':'inline-block', 
+                'resize':'vertical', 'padding': '10px', 'boxSizing': 'border-box'},
+        ),
+    ], style={"width": "70%", "marginTop": "10px"}),
+
     html.Div(children=[
         html.Div(
             className='box',
@@ -71,13 +61,14 @@ prompt_engineering = html.Div(children=[
                 html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
                     html.Button('Remove selected variable', id='remove-variable-button')
-                ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px'}),
-                dcc.Tabs(content_style={"width": "100%"},
-                            parent_style={"width": "100%"},
-                            style={'width':'100%'},
-                            id="variable-container", children=[], vertical=True),
+                ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
+                dcc.Tabs(
+                    content_style={"width": "100%", 'flex-direction':'column'},
+                    parent_style={"width": "100%",'flex-direction':'column'},
+                    style={'width':'100%', 'flex-direction':'column'},
+                    id="variable-container", children=[], vertical=True),
             ],
-            style={'width':'47%'},
+            style={'width':'47%', 'overflowY': 'scroll'},
         ),
         html.Div(
             className='box',
@@ -87,30 +78,34 @@ prompt_engineering = html.Div(children=[
                     children=[html.Button('Add variant', id='add-variant-button', n_clicks=0)],
                     style={'display':'flex', 'justify-content':'center', 'padding': '10px 20px'}
                 ),
-                html.Div(id='variant-container', children=[
-                ]),
+                html.Div(id='variant-container', children=[], style={"marginBottom": "15px"}),
                 dcc.Store(id='variant-store', data=defaultdict(dict))
             ],
-            style={'width':'47%', 'display':'inline-block'},
+            style={'width':'47%', 'overflowY': 'scroll'},
         )
         ],
         style={'display':'flex', 'justify-content':'space-between', 'marginTop': '20px', 'height': '250px'}
     ),
     html.Div(children=[
             dcc.Store('prompt-list'),
+            dcc.Store('true-label'),
             html.Button('Generate prompts', id='button-generate-prompts'),
             html.Button('Test prompts', id='button-test-prompts'),
-            'Select number of samples',
-            html.Div(children=dcc.Dropdown([10, 20, 50], 10, id='select-num-samples'))
         ], 
-        style={'width':'100%', 'marginTop': '15px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
+        style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
+    ),
+    html.Div(children=[
+        dcc.Interval(id='interval-component', interval=500),
+        html.Progress(id='prompt-run-progress', max="100", value="0", style={'width':'90%'}), 
+        ], 
+        style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
     html.Div(id='generated-prompts-container', children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
 
     html.Div(id='tested-prompts-container', children=[
         html.Div(children='test prompt')
-    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
+    ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'})
 
 ])
 
@@ -121,83 +116,134 @@ prompt_engineering = html.Div(children=[
     Input('button-generate-prompts', 'n_clicks'),
     State('variant-store', 'data'),
     State('textarea-prompt', 'value'),
-    prevent_initial_call = True
+    prevent_initial_call=True
 )
 def generate_prompts(generate_clicks, data, prompt):
     ctx_id = ctx.triggered_id
     if not ctx_id:
         return [], []
 
+    # Extract variables and create permutations
     vars = []
     for var_num, variants in data.items():
         vars.append([(var_num, var) for var in list(variants.values())])
-    permurations = list(itertools.product(*vars))
+    permutations = list(itertools.product(*vars))
 
     generated_prompts = []
     prompt_list = []
-    for idx, perm in enumerate(permurations, start=1):
+
+    def get_synonym(word):
+        synonyms = wordnet.synsets(word)
+        if synonyms:
+            # Get the first synonym
+            synonym = synonyms[0].lemmas()[0].name()
+            if synonym.lower() != word.lower():
+                return synonym
+        return word
+
+    # Generate prompts for each permutation
+    for idx, perm in enumerate(permutations, start=1):
         new_prompt = prompt
         for variable in perm:
             new_prompt = new_prompt.replace('{var' + variable[0] + '}', variable[1])
-        # Store prompts as strings, later to be used in test_prompts()
+        
+        # Store the prompt string
         prompt_list.append(new_prompt)
 
-        # Convert to list of lines with html.Br() instead of \n.
+        # Convert to list of lines with html.Br() instead of \n, with synonym tooltips
         prompt_lines = []
         for line in new_prompt.split('\n'):
-            prompt_lines.append(line)
+            line_words = line.split()
+            for word in line_words:
+                synonym = get_synonym(word)
+                prompt_lines.append(
+                    html.Span(
+                        word,
+                        style={'cursor': 'pointer'},
+                        title=f'Synonym: {synonym}'
+                    )
+                )
+                prompt_lines.append(' ')  # Add space between words
             prompt_lines.append(html.Br())
-        prompt_lines = prompt_lines[:-1]
+        prompt_lines = prompt_lines[:-1]  # Remove the last html.Br()
 
+        # Create a div for the generated prompt
         generated_prompts.append(html.Div(
-            id={'type': 'generated-prompt', 'index': int(idx)}, 
-            children=prompt_lines, 
-            style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block'}))
+            id={'type': 'generated-prompt', 'index': int(idx)},
+            children=prompt_lines,
+            style={'border': '1px solid #000', 'height': 200, 'width': 200, 'padding': 15, 'boxSizing': 'border-box', 'display': 'inline-block'}
+        ))
 
     return generated_prompts, prompt_list
+
+@callback(
+    Output('prompt-run-progress', 'value'),
+    Input('interval-component', 'n_intervals')
+)
+
+def update_progressbar(n_intervals):
+    with open(progress_file,  'r') as f:
+        progress = f.readline()
+    return str(progress)
+
+def update_progressfile(progress):
+    with open(progress_file,  'w') as f:
+        f.write(str(progress))
+
+def clear_progressfile():
+    with open(progress_file, 'w') as f:
+        f.write('0')
 
 @callback(
     # Output('tested-prompts-container', 'children'),
     Output('generated-prompts-container', 'children', allow_duplicate=True),
     Input('button-test-prompts', 'n_clicks'),
     Input("dataset-selection", "value"),
-    State('prompt-labels', 'children'),
+    State('true-label', 'data'),
     State('prompt-list', 'data'),
     State('prompt-sample', 'children'),
     prevent_initial_call = True
-    #State({'type': 'generated-prompt', 'index': dependencies.ALL}, 'children')
 )
 def test_prompts(test_button, dataset_name, true_label, generated_prompts, text):
     if not test_button:
         return []
-    
+
     if dataset_name == "AG News":
         classifier = news_classifier
     if dataset_name == "Amazon Polarity" or dataset_name == "GLUE/sst2":
         classifier = sent_classifier
 
     pred_labels = []
+    n_total = len(generated_prompts)
+    clear_progressfile()
 
-    for prompt in tqdm(generated_prompts):
-        prompt = prompt.format(text=text)
-        pred_label = classifier(prompt)
-        pred_labels.append(pred_label)
+    if snellius:
+        with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
+            future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
+            for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
+                label, words, att_data = future.result()
+                pred_labels.append(label)
+                update_progressfile(((i+1)/n_total)*100)
+    else:
+        for i, prompt in tqdm(enumerate(generated_prompts)):
+            prompt = prompt.format(text=text)
+            pred_label, words, att_data = classifier(prompt)
+            pred_labels.append(pred_label)
+            update_progressfile(((i+1)/n_total)*100)
 
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
     for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, generated_prompts)):
         if pred_label == true_label:
-            color='green' 
+            color='LightGreen' 
         else:
-            color='red'
+            color='LightCoral'
         prompt_lines = []
         for line in new_prompt.split('\n'):
             prompt_lines.append(line)
-            # print(type(line))
             prompt_lines.append(html.Br())
-        # prompt_lines.append(html.Hr())
-        # prompt_lines.append(html.P(children="Predicted label: " + pred_label))
-        prompt_lines = prompt_lines[:-1]
+        prompt_lines.append(html.Hr())
+        prompt_lines.append(f"Predicted: {pred_label}")
 
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
@@ -236,20 +282,20 @@ def update_variants(add_clicks, pressed_tab, variants, tabs_state, all_variants)
             idx += 1
         all_variants[tabs_state][idx] = f"Variant {idx}"
 
-        new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
+        new_variant = html.Div(style={'display':'grid', 'grid-template-columns':'77% 20%', 'justifyContent': 'space-between', 'height':40, 'padding': '5px 15px'}, children=[
             dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
                     value=all_variants[tabs_state][idx],
-                    type='text'),
+                    type='text',
+                    style={"paddingLeft": "15px"}),
             html.Button('X', id={'type': 'variant-button-delete', 'index': f"{tabs_state}-{idx}"}),
         ])
         variants.append(new_variant)
     # Add variables.
     elif ctx_id == 'variable-container':
         if pressed_tab in all_variants:
-            vars = [html.Div(style={'display':'grid', 'grid-template-columns':'80% 20%','height':40}, children=[
-                dcc.Input(id={'type': 'variant-input', 'index': int(idx)},
-                        value=val,
-                        type='text'),
+            vars = [html.Div(style={'display':'grid', 'grid-template-columns':'77% 20%', 'justifyContent': 'space-between', 'height': "40px",'padding': '5px 15px'}, children=[
+                dcc.Input(id={'type': 'variant-input', 'index': int(idx)}, value=val, type='text',
+                          style={"paddingLeft": "15px"}),
                 html.Button('X', id={'type': 'variant-button-delete', 'index': f"{pressed_tab}-{idx}"}),
             ]) for idx, val in all_variants[pressed_tab].items()]
 
@@ -324,8 +370,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
         new_tab_value = f'{new_index}'
         new_tab = dcc.Tab(label=f'var{new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
-                          style={'width':'100%', 'line-width': '100%'},
-                          selected_style={'width':'100%', 'line-width': '100%'})
+                          style={'line-width': '100%', 'flex-grow': 1},
+                          selected_style={'line-width': '100%'})
         tabs.append(new_tab)
         active_tab = new_tab_value
 
@@ -342,7 +388,6 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
 @callback(
     Output("samples-table", "selectedRows", allow_duplicate=True),
     Output("prompt-sample", "children", allow_duplicate=True),
-    #Output("prompt-labels", "children", allow_duplicate=True),
     Input("button-left", "n_clicks"),
     Input("button-right", "n_clicks"),
     Input("samples-table", "selectedRows"),
