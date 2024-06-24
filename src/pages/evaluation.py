@@ -2,6 +2,8 @@ from dash import html, Output, Input, callback, dcc, State, ctx
 import dash_ag_grid
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
+import dash_daq as daq
+import dash_bootstrap_components as dbc
 
 import pandas as pd
 from .tinyllama import sent_classifier, news_classifier, make_confusion_matrix
@@ -15,22 +17,32 @@ evaluation = html.Div(children=[
     dcc.Store(id='prompt-predictions'),
     html.H1(children='Evaluation', style={'textAlign':'center'}),
     html.Button('Run prompts', id='run-all-prompts-btn'),
-    html.Div(children=dash_ag_grid.AgGrid(
-        columnDefs=[],
-        rowData=[],
-        columnSize="responsiveSizeToFit",
-        dashGridOptions={
-            "pagination": False,
-            "paginationAutoPageSize": True,
-            "suppressCellFocus": True,
-            "rowSelection": "multiple",
-        },
-        selectedRows=[],
-        # defaultColDef={"filter": "agTextColumnFilter"},
-        # className='stretchy-widget ag-theme-alpine',
-        # style={'width': '', 'height': ''},
-        id='evaluation-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"}),
+    dcc.Loading(
+        id="loading-1",
+        type="default",
+        children=html.Div(id="loading-output-1")
+    ),
+    dcc.Loading(
+        html.Div(children=dash_ag_grid.AgGrid(
+            columnDefs=[],
+            rowData=[],
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={
+                "pagination": False,
+                "paginationAutoPageSize": True,
+                "suppressCellFocus": True,
+                "rowSelection": "multiple",
+            },
+            selectedRows=[],
+            # defaultColDef={"filter": "agTextColumnFilter"},
+            # className='stretchy-widget ag-theme-alpine',
+            # style={'width': '', 'height': ''},
+            id='evaluation-table'
+        ), 
+        style={"marginTop": "30px", "marginBottom": "30px"}),
+        id="loading-evaluation"
+    ),
+    html.Div(id="eval-prompts-container", style={'width':'100%',  "border": "1px solid black", 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}, children=[]),
     html.Div(id="confusion-matrix-container", 
              children=dcc.Graph(
                  id="confusion-matrix",
@@ -48,7 +60,6 @@ evaluation = html.Div(children=[
     State("dataset-selection", "value"),
     State("selected-dataset", "data"),
     State('prompt-list', 'data'),
-#    State('prompt-predictions', 'data'),
     State("samples-table", "rowData")
 )
 def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prompt_list, samples):
@@ -91,8 +102,8 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
         #     if 'preds' not in prediction_dict[i]:
         #         prediction_dict[i]['preds'] = []
         #     prediction_dict[i]['preds'].append((pred_label, true_label))
-        ###
-                
+        ##
+
         for idx, (pred_label, new_prompt) in enumerate(zip(pred_labels, prompt_list)):
             if true_label not in prediction_dict[idx]:
                 prediction_dict[idx][true_label] = 0
@@ -104,8 +115,6 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
             else: 
                 if true_label == pred_label:
                     prediction_dict[idx][true_label] += 1
-
-        
         
     labels = select_dataset(dataset_name)['scheme'].split(", ")
     colDefs = [{'field':'#'}, {"field":"Prompt"}, {"field":"Total Correct"}]
@@ -142,11 +151,8 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
 
 @callback(
     Output("confusion-matrix", "figure"),
-    # Input("evaluation-table", "rowData"),
+    Output("eval-prompts-container", "children"),
     Input("evaluation-table", "selectedRows"),
-    #Input("selected-dataset", "data"),
-    #Input("generated-prompts-container", "children"),
-    #Input("run-all-prompts-btn", "n_clicks"),
     State("dataset-selection", "value"),
     State("prompt-predictions", "data")
 )
@@ -168,14 +174,40 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
             ],
             margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
         )
-        return fig
+        return fig, []
 
     predicted_labels = []
     gt_labels = []
+    prompt_container_children = []
     for row in selected_rows:
         for (pred, gt) in prediction_dict[str(row['#'] - 1)]['preds']:
             predicted_labels.append(pred)
             gt_labels.append(gt)
+            
+        prompt_lines = []
+        for line in row['Prompt'].split('\n'):
+            prompt_lines.append(line)
+            prompt_lines.append(html.Br())
+        prompt_lines = prompt_lines[:-1]
+
+        correct = row["Total Correct"].split(" / ")
+        correct, total = int(correct[0]), int(correct[1])
+        prompt_div = html.Div([
+                html.Div(
+                    children=[html.B(f'Prompt {row["#"]}:'), html.P(prompt_lines), html.P(row['Total Correct']),
+                              
+                dbc.Progress(
+                    [
+                        dbc.Progress(value=correct / total * 100, bar=True),
+                    ]
+                )],
+                    style={"width":150, "padding":"15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px",}           
+                ),
+            ],
+        )
+
+        prompt_container_children.append(prompt_div)
+
     labels = select_dataset(dataset_name)['scheme'].split(", ")
     cm = confusion_matrix(gt_labels, predicted_labels, labels=labels)
 
@@ -193,5 +225,5 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
         xaxis_title='Predicted Label',
         yaxis_title='True Label')
 
-    return fig
+    return fig, prompt_container_children
 

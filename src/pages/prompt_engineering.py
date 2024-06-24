@@ -10,6 +10,8 @@ from nltk.corpus import wordnet
 
 nltk.download('wordnet', quiet=True)
 
+import os
+progress_file = os.path.abspath('src/pages/progress.txt')
 
 
 prompt_engineering = html.Div(children=[
@@ -61,9 +63,9 @@ prompt_engineering = html.Div(children=[
                     html.Button('Remove selected variable', id='remove-variable-button')
                 ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
                 dcc.Tabs(
-                    content_style={"width": "100%"},
-                    parent_style={"width": "100%"},
-                    style={'width':'100%'},
+                    content_style={"width": "100%", 'flex-direction':'column'},
+                    parent_style={"width": "100%",'flex-direction':'column'},
+                    style={'width':'100%', 'flex-direction':'column'},
                     id="variable-container", children=[], vertical=True),
             ],
             style={'width':'47%', 'overflowY': 'scroll'},
@@ -88,7 +90,13 @@ prompt_engineering = html.Div(children=[
             dcc.Store('prompt-list'),
             dcc.Store('true-label'),
             html.Button('Generate prompts', id='button-generate-prompts'),
-            html.Button('Test prompts', id='button-test-prompts')
+            html.Button('Test prompts', id='button-test-prompts'),
+        ], 
+        style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
+    ),
+    html.Div(children=[
+        dcc.Interval(id='interval-component', interval=500),
+        html.Progress(id='prompt-run-progress', max="100", value="0", style={'width':'90%'}), 
         ], 
         style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
@@ -168,6 +176,23 @@ def generate_prompts(generate_clicks, data, prompt):
 
     return generated_prompts, prompt_list
 
+@callback(
+    Output('prompt-run-progress', 'value'),
+    Input('interval-component', 'n_intervals')
+)
+
+def update_progressbar(n_intervals):
+    with open(progress_file,  'r') as f:
+        progress = f.readline()
+    return str(progress)
+
+def update_progressfile(progress):
+    with open(progress_file,  'w') as f:
+        f.write(str(progress))
+
+def clear_progressfile():
+    with open(progress_file, 'w') as f:
+        f.write('0')
 
 @callback(
     # Output('tested-prompts-container', 'children'),
@@ -189,19 +214,22 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         classifier = sent_classifier
 
     pred_labels = []
+    n_total = len(generated_prompts)
+    clear_progressfile()
 
     if snellius:
         with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
             future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
-            total_prompts = len(generated_prompts)
-            for future in tqdm(as_completed(future_to_prompt), total=total_prompts):
+            for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
                 label, words, att_data = future.result()
                 pred_labels.append(label)
+                update_progressfile(((i+1)/n_total)*100)
     else:
-        for prompt in tqdm(generated_prompts):
+        for i, prompt in tqdm(enumerate(generated_prompts)):
             prompt = prompt.format(text=text)
             pred_label, words, att_data = classifier(prompt)
             pred_labels.append(pred_label)
+            update_progressfile(((i+1)/n_total)*100)
 
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
@@ -342,8 +370,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
         new_tab_value = f'{new_index}'
         new_tab = dcc.Tab(label=f'var{new_index}', value=new_tab_value, 
                           id={'type': 'tab', 'index': new_index},
-                          style={'width':'100%', 'line-width': '100%'},
-                          selected_style={'width':'100%', 'line-width': '100%'})
+                          style={'line-width': '100%', 'flex-grow': 1},
+                          selected_style={'line-width': '100%'})
         tabs.append(new_tab)
         active_tab = new_tab_value
 

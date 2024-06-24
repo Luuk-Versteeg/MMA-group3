@@ -75,7 +75,7 @@ def news_classifier(prompt: str):
     else:
         predicted_label = "Unknown"
     
-    return predicted_label
+    return predicted_label, answer
     
 def make_confusion_matrix(y_pred, y_true):
     return metrics.confusion_matrix(y_true, y_pred)
