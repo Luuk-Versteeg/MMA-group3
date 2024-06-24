@@ -285,8 +285,11 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     State('full-prompt', 'children'),
     State('full-answer', 'children')
 )
-def show_answer(prompt_clicks, token_clicks, results_dict, full_prompt, full_answer):
+def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
     ctx_id = ctx.triggered_id
+
+    if ctx_id == None:
+        return prompt, answer
 
     # Pressed on output token.
     if ctx_id['type'] == 'token':
@@ -312,14 +315,13 @@ def show_answer(prompt_clicks, token_clicks, results_dict, full_prompt, full_ans
                                   style={"color": color, 'margin-right': '5px', 'cursor': 'pointer'})
                     )
                 
-                return full_prompt, colored_text
+                return prompt, colored_text
     # Pressed attention button.
     else:
         prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens = results_dict[str(ctx_id['index'])][2]
         
         return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}-{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
-
 
 @callback(
     Output('variant-container', 'children'),
