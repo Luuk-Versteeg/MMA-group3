@@ -12,6 +12,7 @@ from .utils import add_synonyms, filter_text
 
 from widgets import histogram
 from dataloaders.load_data import datasets
+from wordcloud import WordCloud
 
 
 data_selection = html.Div(children=[
@@ -164,6 +165,7 @@ def update_max_samples(dataset_name, dataset_split):
     prevent_initial_call=True
 )
 def update_wordcloud_histogram(dataframe_data):
+    # Handle the case when no dataset is selected
     if not dataframe_data:
         fig = go.Figure()
         fig.update_layout(
@@ -178,13 +180,15 @@ def update_wordcloud_histogram(dataframe_data):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=0)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=0)
         )
         return fig
 
+    # Convert input data to DataFrame
     dataframe = pd.DataFrame.from_dict(dataframe_data)
     words_per_label = {}
 
+    # Process each row to collect words by label
     for _, row in dataframe.iterrows():
         label = row['label']
         description = row['text']
@@ -194,11 +198,13 @@ def update_wordcloud_histogram(dataframe_data):
             words_per_label[label] = []
         words_per_label[label].extend(filtered_description)
 
+    # Find the most common words for each label
     most_common_words = {}
     for label, words in words_per_label.items():
         word_counts = Counter(words)
         most_common_words[label] = word_counts.most_common(10)
 
+    # Prepare data for word cloud generation
     all_words = []
     all_counts = []
     all_labels = []
@@ -210,44 +216,34 @@ def update_wordcloud_histogram(dataframe_data):
             all_counts.append(count)
             all_labels.append(label)
 
-    # Normalize counts to a range suitable for font sizes
-    min_size, max_size = 10, 35
-    min_count, max_count = min(all_counts), max(all_counts)
-    def normalize(size, min_count, max_count, min_size, max_size):
-        if max_count == min_count:  # handle the case when all counts are the same
-            return (min_size + max_size) / 2
-        return min_size + (size - min_count) * (max_size - min_size) / (max_count - min_count)
+    # Create a dictionary with word frequencies and a dictionary for colors
+    word_frequencies = {word: count for word, count in zip(all_words, all_counts)}
+    word_colors = {word: label_colors[label] for word, label in zip(all_words, all_labels)}
 
-    sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in all_counts]
+    # Custom color function for the word cloud
+    def color_func(word, *args, **kwargs):
+        return word_colors.get(word, "black")
 
-    def grid_positions(n, deviation=0.15):
-        positions = []
-        grid_size = int(n**0.5) + 1
-        for i in range(n):
-            row = i // grid_size
-            col = i % grid_size
-            x = col + random.uniform(-deviation, deviation)
-            y = row + random.uniform(-deviation, deviation)
-            positions.append((x, y))
-        return positions
+    # Generate the word cloud image with custom coloring
+    wc = WordCloud(width=800, height=400, background_color='white', color_func=color_func).generate_from_frequencies(word_frequencies)
 
-    positions = grid_positions(len(all_words))
-    x = [pos[0] for pos in positions]
-    y = [pos[1] for pos in positions]
-    colors = [label_colors[label] for label in all_labels]
+    # Convert the word cloud image to a Plotly figure
+    fig = go.Figure()
 
-    # Create the word cloud using Plotly
-    data = go.Scatter(
-        x=x,
-        y=y,
-        mode='text',
-        text=all_words,
-        marker={'opacity': 0.3},
-        textfont={'size': sizes, 'color': colors},
-        showlegend=False,  # Hide the main scatter plot from the legend
+    fig.add_layout_image(
+        dict(
+            source=wc.to_image(),
+            xref="x",
+            yref="y",
+            x=0,
+            y=1,
+            sizex=1,
+            sizey=1,
+            xanchor="left",
+            yanchor="top",
+            layer="below"
+        )
     )
-
-    fig = go.Figure(data=[data])
 
     # Add invisible scatter plots for legend entries
     for label, color in label_colors.items():
@@ -259,9 +255,10 @@ def update_wordcloud_histogram(dataframe_data):
             name=label
         ))
 
+    # Update layout to hide axes and show legend
     fig.update_layout(
-        xaxis=dict(range=[min(x)-2, max(x)+2], showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(range=[min(x), max(x)],showgrid=False, zeroline=False, showticklabels=False),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         margin=dict(b=0, l=0, r=0, t=0),
         showlegend=True,
         legend=dict(title="Labels", itemsizing='constant')
