@@ -111,7 +111,7 @@ prompt_engineering = html.Div(children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
     
     html.Div(style={'width': '100%'}, children=[
-        html.Div('Prompt:', id='full-prompt', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px'}),
+        html.Div('Prompt:', id='full-prompt', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
         html.Div(style={
             'width': '100%',
             'height': '1px',
@@ -298,24 +298,43 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
     # Pressed on output token.
     if ctx_id['type'] == 'token':
-
         prompt_idx, clicked_pos, clicked_token = ctx_id['index'].split("---")
         clicked_pos = int(clicked_pos)
 
         scores_lists = results_dict[str(prompt_idx)][3]
         answer_tokens = results_dict[str(prompt_idx)][2]
 
-        attention_scores = scores_lists[clicked_pos][1]
+        # Find relevant parts of output.    
+        sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
+        start = find_sublist_index(answer_tokens, sublist) + len(sublist)
+        sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
+        end = find_sublist_index(answer_tokens, sublist)
 
-        print(f"{clicked_token}{attention_scores}")
+        attention_scores = scores_lists[clicked_pos][1]
         attention_scores = np.array(attention_scores)
-        normalized_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
+        prompt_scores = attention_scores[start:end]
+        normalized_scores = (attention_scores - prompt_scores.min()) / (prompt_scores.max() - prompt_scores.min())
+        mean_score = np.median(normalized_scores[start:end])
+        print("\n\n\n----------------")
+        print(answer_tokens)    
+        print("\n")  
+        print(answer_tokens[start:end]) 
 
         colored_text = []
         for i, (token, score) in enumerate(zip(answer_tokens, normalized_scores)):
-            color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 0)"  # Gradient from red to green
+            #color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 255)"  # Gradient from red to green
+            if score >= mean_score:
+                lerp = int(255 * (1 - (score - mean_score) / mean_score))
+                color = f"rgb(255, {lerp}, {lerp})"
+            else:
+                lerp = int(255 * score / mean_score)
+                color = f"rgb({lerp}, 255, {lerp})"
 
-            style={"color": color, 'margin-right': '5px', 'cursor': 'pointer'}
+            if score == 0 or i < start or i > end:
+                color = "rgb(255, 255, 255)"
+
+            style={"background-color": color, 'cursor': 'pointer'}
+        
             if i == clicked_pos:
                 style['textDecoration'] =  'underline'
                 style['fontWeight'] = 'bold'
@@ -325,14 +344,26 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                           id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"},
                           style=style)
             )
-        
-        return prompt, colored_text
+         
+        return colored_text[start:end], colored_text[end + len(sublist):-2]
     # Pressed attention button.
     else:
         prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens = results_dict[str(ctx_id['index'])][2]
-        
-        return prompt, [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+
+        sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
+        start = find_sublist_index(answer_tokens, sublist) + len(sublist)
+        sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
+        end = find_sublist_index(answer_tokens, sublist)
+        text =  [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+        return text[start:end], text[end + len(sublist):-2]
+
+
+def find_sublist_index(biglist, sublist):
+    end = len(biglist) - len(sublist) + 1
+    for idx in range(0, end):
+        if sublist == biglist[idx:idx+len(sublist)]:
+            return idx
 
 @callback(
     Output('variant-container', 'children'),
