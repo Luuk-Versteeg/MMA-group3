@@ -2,7 +2,7 @@ from dash import html
 
 
 name = "GLUE/sst2"
-scheme = "Negative, Positive"
+scheme = "Negative and Positive"
 description = [
     "GLUE, the ",
     html.A("General Language Understanding Evaluation benchmark", href="https://gluebenchmark.com/", target="_blank"), 

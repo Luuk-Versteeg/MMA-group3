@@ -1,11 +1,8 @@
 from dash import html, Output, Input, callback, dcc, State, ctx
 import dash_ag_grid
-import plotly.figure_factory as ff
 import numpy as np
-import nltk
 from nltk.tokenize import word_tokenize
 import plotly.graph_objects as go
-import dash_daq as daq
 import dash_bootstrap_components as dbc
 
 import pandas as pd
@@ -135,7 +132,7 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
         # UNCOMMENT THIS TO USE MODEL PREDICTIONS
         for i, prompt in enumerate(tqdm(prompt_list)):
             prompt = prompt.format(text=text)
-            pred_label, _ = classifier(prompt)            
+            pred_label, words, att_data = classifier(prompt)            
             pred_labels.append(pred_label)
 
             # Used by the confusion matrix.
@@ -164,7 +161,7 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
                 if true_label == pred_label:
                     prediction_dict[idx][true_label] += 1
         
-    labels = select_dataset(dataset_name)['scheme'].split(", ")
+    labels = select_dataset(dataset_name)['labels'].values()
     colDefs = [{'field':'#'}, {"field":"Prompt"}, {"field":"Total Correct"}]
     for label in labels:
         colDefs.append({"field": label})
@@ -256,7 +253,7 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
 
         prompt_container_children.append(prompt_div)
 
-    labels = select_dataset(dataset_name)['scheme'].split(", ")
+    labels = select_dataset(dataset_name)['labels'].values()
     cm = confusion_matrix(gt_labels, predicted_labels, labels=labels)
 
     fig = go.Figure(data=go.Heatmap(
