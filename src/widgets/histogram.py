@@ -17,7 +17,7 @@ def create_histogram(selected_data=None, id="histogram"):
                   clear_on_unhover=True),
         dcc.Tooltip(id=f"histogram-tooltip-{id}",
                     loading_text="LOADING"),
-    ], className='border-widget stretchy-widget histogram-container')
+    ], className='border-widget stretchy-widget histogram-container', style={"padding": "10px 0px"})
 
 
 def draw_histogram(selected_data):

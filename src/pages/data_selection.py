@@ -8,7 +8,7 @@ import plotly
 import random
 import nltk
 from nltk.corpus import stopwords, wordnet
-from nltk import word_tokenize, pos_tag
+from nltk import word_tokenize
 from collections import Counter
 
 from widgets import histogram
@@ -36,8 +36,7 @@ data_selection = html.Div(children=[
                     html.Button("Resample", id="resample")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
                 html.P(id="dataset-description"),
-                html.P(children=f'Scheme:', id="dataset-scheme")
-            ]),
+                html.P(children=f'Scheme:', id="dataset-scheme")            ]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
         ], style={"width": "48%"}),
         html.Div(dcc.Tabs(children=[
@@ -56,13 +55,8 @@ data_selection = html.Div(children=[
             "rowSelection": "single",
         },
         selectedRows=[],
-        # defaultColDef={"filter": "agTextColumnFilter"},
-        # className='stretchy-widget ag-theme-alpine',
-        # style={'width': '', 'height': ''},
         id='samples-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"}),
-    # New div for displaying synonyms
-    html.Div(id="synonyms-output", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
+    ), style={"marginTop": "30px", "marginBottom": "30px"})
 ])
 
 
@@ -105,7 +99,7 @@ def update_dataset_details(dataset_name):
 )
 
 
-def update_selected_dataset(dataset_name, dataset_split, n_samples, n_clicks):
+def update_selected_dataset(dataset_name, dataset_split, n_samples, _):
     if not dataset_name or not dataset_split:
         return
 
@@ -146,7 +140,7 @@ def get_synonyms(word):
 
 @callback(
     Output("selected-sample", "children"),
-    Input("samples-table", "selectedRows")
+    Input("samples-table", "selectedRows"),
 )
 def update_sample(selected_rows):
     if len(selected_rows) == 0:
@@ -155,7 +149,32 @@ def update_sample(selected_rows):
     output = []
 
     for key, value in selected_rows[0].items():
-        output.append(html.P(f"{key}: {value}"))
+        tokens = word_tokenize(value)
+        syn_out = []
+
+        for token in tokens:
+
+            try:
+                synonyms = get_synonyms(token)
+            except:
+                synonyms = []
+
+            if synonyms:
+                # Pick 5 random synonyms from the list, or fewer if less than 5 are available
+                random_synonyms = random.sample(synonyms, min(5, len(synonyms)))
+                # Create a span element with tooltip and apply styling
+                token_element = html.Span(
+                    token,
+                    className='synonym-token',  # CSS class for styling
+                    style={'border-bottom': '1px dashed red', 'cursor': 'help'},
+                    title=f'Synonyms: {", ".join(random_synonyms)}'  # Tooltip content
+                )
+                syn_out.append(token_element)
+                syn_out.append(" ")  # Add space between tokens for readability
+            else:
+                syn_out.append(token + " ")  # No tooltip if no synonyms found
+
+        output.append(html.P([html.Span(f"{key}: "),*syn_out]))
 
     return output
 
@@ -182,10 +201,9 @@ def update_max_samples(dataset_name, dataset_split):
 @callback(
     Output("wordcloud", "figure"),
     Input("selected-dataset", "data"),
-    State("dataset-selection", "value"),
-    State("dataset-split", "value"),
+    prevent_initial_call=True
 )
-def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
+def update_wordcloud_histogram(dataframe_data):
     if not dataframe_data:
         fig = go.Figure()
         fig.update_layout(
@@ -298,6 +316,7 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
     Input("selected-dataset", "data"),
     State("dataset-selection", "value"),
     State("dataset-split", "value"),
+    prevent_initial_call=True,
 )
 def update_label_histogram(dataframe_data, dataset_name, dataset_split):
     if not dataframe_data:
@@ -372,38 +391,3 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
         selected_rows[0]['label'],
         "Possible labels: " + dataset['scheme'],
     )
-
-
-@callback(
-    Output("synonyms-output", "children"),
-    Input("samples-table", "selectedRows")
-)
-def display_synonyms(selected_rows):
-    if len(selected_rows) == 0:
-        return html.P("No sample selected...")
-
-    selected_text = selected_rows[0].get('text', '')
-    tokens = word_tokenize(selected_text)
-    output = []
-
-    for token in tokens:
-        synonyms = get_synonyms(token)
-        if synonyms:
-            # Pick 5 random synonyms from the list, or fewer if less than 5 are available
-            random_synonyms = random.sample(synonyms, min(5, len(synonyms)))
-            # Create a span element with tooltip and apply styling
-            token_element = html.Span(
-                token,
-                className='synonym-token',  # CSS class for styling
-                style={'border-bottom': '1px dashed red', 'cursor': 'help'},
-                title=f'Synonyms: {", ".join(random_synonyms)}'  # Tooltip content
-            )
-            output.append(token_element)
-            output.append(" ")  # Add space between tokens for readability
-        else:
-            output.append(token + " ")  # No tooltip if no synonyms found
-
-    if not output:
-        return html.P("No synonyms found...")
-
-    return html.P(output)
