@@ -6,8 +6,9 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import nltk
 from nltk.corpus import wordnet
+import random
 
-nltk.download('wordnet', quiet=True)
+# nltk.download('wordnet', quiet=True)
 
 import os
 import numpy as np
@@ -121,6 +122,14 @@ prompt_engineering = html.Div(children=[
     ])
 ])
 
+def get_synonyms(word):
+    synonyms = set()
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            if lemma.name() != word:
+                synonyms.add(lemma.name())
+    return list(synonyms)
+
 
 @callback(
     Output('generated-prompts-container', 'children', allow_duplicate=True),
@@ -131,8 +140,7 @@ prompt_engineering = html.Div(children=[
     prevent_initial_call=True
 )
 def generate_prompts(generate_clicks, data, prompt):
-    ctx_id = ctx.triggered_id
-    if not ctx_id:
+    if not generate_clicks:
         return [], []
 
     # Extract variables and create permutations
@@ -143,15 +151,6 @@ def generate_prompts(generate_clicks, data, prompt):
 
     generated_prompts = []
     prompt_list = []
-
-    def get_synonym(word):
-        synonyms = wordnet.synsets(word)
-        if synonyms:
-            # Get the first synonym
-            synonym = synonyms[0].lemmas()[0].name()
-            if synonym.lower() != word.lower():
-                return synonym
-        return word
 
     # Generate prompts for each permutation
     for idx, perm in enumerate(permutations, start=1):
@@ -167,14 +166,20 @@ def generate_prompts(generate_clicks, data, prompt):
         for line in new_prompt.split('\n'):
             line_words = line.split()
             for word in line_words:
-                synonym = get_synonym(word)
-                prompt_lines.append(
-                    html.Span(
+                synonyms = get_synonyms(word)
+                if synonyms:
+                    random_synonyms = random.sample(synonyms, min(5, len(synonyms)))
+                    synonym_tooltip = ', '.join(random_synonyms)
+                    word_element = html.Span(
                         word,
-                        style={'cursor': 'pointer'},
-                        title=f'Synonym: {synonym}'
+                        className='synonym-token',  # CSS class for styling
+                        style={'border-bottom': '1px dashed red', 'cursor': 'help'},
+                        title=f'Synonyms: {synonym_tooltip}'
                     )
-                )
+                else:
+                    word_element = word
+
+                prompt_lines.append(word_element)
                 prompt_lines.append(' ')  # Add space between words
             prompt_lines.append(html.Br())
         prompt_lines = prompt_lines[:-1]  # Remove the last html.Br()

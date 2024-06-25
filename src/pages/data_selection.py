@@ -243,9 +243,20 @@ def update_wordcloud_histogram(dataframe_data, dataset_name, dataset_split):
 
     sizes = [normalize(count, min_count, max_count, min_size, max_size) for count in all_counts]
 
-    # Generate random positions for the word cloud
-    x = [random.random() for _ in range(len(all_words))]
-    y = [random.random() for _ in range(len(all_words))]
+    def grid_positions(n, deviation=0.15):
+        positions = []
+        grid_size = int(n**0.5) + 1
+        for i in range(n):
+            row = i // grid_size
+            col = i % grid_size
+            x = col + random.uniform(-deviation, deviation)
+            y = row + random.uniform(-deviation, deviation)
+            positions.append((x, y))
+        return positions
+
+    positions = grid_positions(len(all_words))
+    x = [pos[0] for pos in positions]
+    y = [pos[1] for pos in positions]
     colors = [label_colors[label] for label in all_labels]
 
     # Create the word cloud using Plotly
@@ -378,14 +389,14 @@ def display_synonyms(selected_rows):
     for token in tokens:
         synonyms = get_synonyms(token)
         if synonyms:
-            # Pick a random synonym from the list
-            random_synonym = random.choice(synonyms)
+            # Pick 5 random synonyms from the list, or fewer if less than 5 are available
+            random_synonyms = random.sample(synonyms, min(5, len(synonyms)))
             # Create a span element with tooltip and apply styling
             token_element = html.Span(
                 token,
                 className='synonym-token',  # CSS class for styling
                 style={'border-bottom': '1px dashed red', 'cursor': 'help'},
-                title=f'Synonym: {random_synonym}'  # Tooltip content
+                title=f'Synonyms: {", ".join(random_synonyms)}'  # Tooltip content
             )
             output.append(token_element)
             output.append(" ")  # Add space between tokens for readability
