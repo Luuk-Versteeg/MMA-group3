@@ -161,7 +161,7 @@ def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prom
                 if true_label == pred_label:
                     prediction_dict[idx][true_label] += 1
         
-    labels = select_dataset(dataset_name)['labels'].values()
+    labels = list(select_dataset(dataset_name)['labels'].values())
     colDefs = [{'field':'#'}, {"field":"Prompt"}, {"field":"Total Correct"}]
     for label in labels:
         colDefs.append({"field": label})
@@ -253,7 +253,7 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
 
         prompt_container_children.append(prompt_div)
 
-    labels = select_dataset(dataset_name)['labels'].values()
+    labels = list(select_dataset(dataset_name)['labels'].values())
     cm = confusion_matrix(gt_labels, predicted_labels, labels=labels)
 
     fig = go.Figure(data=go.Heatmap(
