@@ -4,11 +4,9 @@ import itertools
 from .tinyllama import sent_classifier, news_classifier, snellius
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import nltk
-from nltk.corpus import wordnet
-import random
 
-# nltk.download('wordnet', quiet=True)
+from .utils import add_synonyms, get_synonyms
+import random
 
 import os
 import numpy as np
@@ -27,7 +25,8 @@ prompt_engineering = html.Div(children=[
                          children=" Improved Pitching Has the Keys Finishing on an Upswing As the season winds down for the Frederick Keys, Manager Tom Lawless is starting to enjoy the progress his pitching staff has made this season.",
                          style={"padding": "15px 30px", "border": "1px solid black", "width": "100%", 
                                 "minHeight": "100px", "display": "flex", "alignItems": "center", "justifyContent": "center"}),
-                html.Button('>', id='button-right', style={"padding": "30px"})
+                html.Button('>', id='button-right', style={"padding": "30px"}),
+                dcc.Store(id="prompt-sample-text")
             ],
             style={'width':'60%', 'display':'flex', 'gap': '20px', 'alignItems': "center"},
         ),
@@ -122,14 +121,6 @@ prompt_engineering = html.Div(children=[
     ])
 ])
 
-def get_synonyms(word):
-    synonyms = set()
-    for syn in wordnet.synsets(word):
-        for lemma in syn.lemmas():
-            if lemma.name() != word:
-                synonyms.add(lemma.name())
-    return list(synonyms)
-
 
 @callback(
     Output('generated-prompts-container', 'children', allow_duplicate=True),
@@ -194,6 +185,7 @@ def generate_prompts(generate_clicks, data, prompt):
 
     return generated_prompts, prompt_list
 
+
 @callback(
     Output('prompt-run-progress', 'value'),
     Input('interval-component', 'n_intervals')
@@ -222,7 +214,7 @@ clear_progressfile()
     Input("dataset-selection", "value"),
     State('true-label', 'data'),
     State('prompt-list', 'data'),
-    State('prompt-sample', 'children'),
+    State('prompt-sample-text', 'data'),
     prevent_initial_call = True,
     running=[(Output("button-test-prompts", "disabled"), True, False)],
 )
@@ -507,7 +499,8 @@ def update_tabs(add_clicks, remove_clicks, tabs, active_tab, all_variants):
 
 @callback(
     Output("samples-table", "selectedRows", allow_duplicate=True),
-    Output("prompt-sample", "children", allow_duplicate=True),
+    Output("prompt-sample", "children"),
+    Output("prompt-sample-text", "data"),
     Input("button-left", "n_clicks"),
     Input("button-right", "n_clicks"),
     Input("samples-table", "selectedRows"),
@@ -523,7 +516,7 @@ def change_sample(left_clicks, right_clicks, selected_rows, row_data, dataset_na
             if entry == selected_rows[0]:
                 row_index = i
     else:
-        return selected_rows, []
+        return selected_rows, [], []
 
     ctx_id = ctx.triggered_id
     if ctx_id == 'button-left':
@@ -536,9 +529,18 @@ def change_sample(left_clicks, right_clicks, selected_rows, row_data, dataset_na
     new_selected = [row_data[row_index]]
 
     output = []
+    text = ""
+
     if 'content' in new_selected[0].keys():
-        output.append(html.P(new_selected[0]['content']))
+        text = new_selected[0]['content']
+
     elif 'Description' in new_selected[0].keys():
-        output.append(html.P(new_selected[0]['Description']))
+        text = new_selected[0]['Description']
+
+    elif 'text' in new_selected[0].keys():
+        text = text = new_selected[0]['text']
+
+    syn_out = add_synonyms(text)
+    output.append(html.P(children=syn_out))
     
-    return new_selected, output
+    return new_selected, output, text

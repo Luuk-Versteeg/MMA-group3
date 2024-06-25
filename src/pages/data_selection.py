@@ -6,20 +6,13 @@ import pandas as pd
 
 import plotly
 import random
-import nltk
-from nltk.corpus import stopwords, wordnet
-from nltk import word_tokenize
 from collections import Counter
+
+from .utils import add_synonyms, filter_text
 
 from widgets import histogram
 from dataloaders.load_data import datasets
 
-nltk.download('stopwords', quiet=True)
-nltk.download('brown', quiet=True)
-nltk.download('punkt', quiet=True)
-nltk.download('averaged_perceptron_tagger', quiet=True)
-
-stop_words = set(stopwords.words('english'))
 
 data_selection = html.Div(children=[
     html.H1(children='Data selection', style={'textAlign': 'center'}),
@@ -129,15 +122,6 @@ def update_grid(dataframe_data):
     return cols, rows, selected
 
 
-def get_synonyms(word):
-    synonyms = set()
-    for syn in wordnet.synsets(word):
-        for lemma in syn.lemmas():
-            if lemma.name() != word:
-                synonyms.add(lemma.name())
-    return list(synonyms)
-
-
 @callback(
     Output("selected-sample", "children"),
     Input("samples-table", "selectedRows"),
@@ -149,31 +133,7 @@ def update_sample(selected_rows):
     output = []
 
     for key, value in selected_rows[0].items():
-        tokens = word_tokenize(value)
-        syn_out = []
-
-        for token in tokens:
-
-            try:
-                synonyms = get_synonyms(token)
-            except:
-                synonyms = []
-
-            if synonyms:
-                # Pick 5 random synonyms from the list, or fewer if less than 5 are available
-                random_synonyms = random.sample(synonyms, min(5, len(synonyms)))
-                # Create a span element with tooltip and apply styling
-                token_element = html.Span(
-                    token,
-                    className='synonym-token',  # CSS class for styling
-                    style={'border-bottom': '1px dashed red', 'cursor': 'help'},
-                    title=f'Synonyms: {", ".join(random_synonyms)}'  # Tooltip content
-                )
-                syn_out.append(token_element)
-                syn_out.append(" ")  # Add space between tokens for readability
-            else:
-                syn_out.append(token + " ")  # No tooltip if no synonyms found
-
+        syn_out = add_synonyms(value)
         output.append(html.P([html.Span(f"{key}: "),*syn_out]))
 
     return output
@@ -224,16 +184,15 @@ def update_wordcloud_histogram(dataframe_data):
 
     dataframe = pd.DataFrame.from_dict(dataframe_data)
     words_per_label = {}
-    allowed_pos = ['NN', 'NNP', 'NNS', 'VB']
+
     for _, row in dataframe.iterrows():
         label = row['label']
         description = row['text']
-        tokens = word_tokenize(description)
-        tokens_pos = nltk.pos_tag(tokens)
-        filtered_tokens = [x[0] for x in tokens_pos if x[1] in allowed_pos and x[0] not in stop_words]
+        filtered_description = filter_text(description)
+
         if label not in words_per_label:
             words_per_label[label] = []
-        words_per_label[label].extend(filtered_tokens)
+        words_per_label[label].extend(filtered_description)
 
     most_common_words = {}
     for label, words in words_per_label.items():
@@ -367,7 +326,7 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
 
 
 @callback(
-    Output("prompt-sample", "children"),
+    # Output("prompt-sample", "children"),
     Output("prompt-label", "children"),
     Output("true-label", "data"),
     Output("possible-answers", "children"),
@@ -378,7 +337,7 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
 def update_prompt_sample(selected_rows, dataset_name, n_samples):
     if len(selected_rows) == 0:
         return (
-            html.P("No sample selected..."), 
+            # html.P("No sample selected..."), 
             "Label of selected sample: no sample selected...", 
             "",
             "Possible labels: no dataset selected..."
@@ -386,7 +345,7 @@ def update_prompt_sample(selected_rows, dataset_name, n_samples):
 
     dataset = select_dataset(dataset_name)
     return (
-        selected_rows[0]['text'], 
+        # selected_rows[0]['text'], 
         [html.Span("Label of selected sample: "), html.Span(selected_rows[0]['label'], style={"fontWeight": "bold"})],
         selected_rows[0]['label'],
         "Possible labels: " + dataset['scheme'],
