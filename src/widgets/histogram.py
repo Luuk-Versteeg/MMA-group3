@@ -17,7 +17,7 @@ def create_histogram(selected_data=None, id="histogram"):
                   clear_on_unhover=True),
         dcc.Tooltip(id=f"histogram-tooltip-{id}",
                     loading_text="LOADING"),
-    ], className='border-widget stretchy-widget histogram-container', style={"padding": "10px 0px"})
+    ], className='border-widget stretchy-widget histogram-container', style={"padding": "10px 0px", "minHeight": "450px"})
 
 
 def draw_histogram(selected_data):
@@ -36,7 +36,7 @@ def draw_histogram(selected_data):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=0)  # Adjust margins to ensure the text is visible
         )
 
         return fig

@@ -37,7 +37,7 @@ data_selection = html.Div(children=[
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
                 html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")            ]),
-            html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px"})
+            html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"})
         ], style={"width": "48%"}),
         html.Div(dcc.Tabs(children=[
             dcc.Tab(label="Labels", children=histogram.create_histogram(id="label-histogram")),
@@ -56,7 +56,7 @@ data_selection = html.Div(children=[
         },
         selectedRows=[],
         id='samples-table'
-    ), style={"marginTop": "30px", "marginBottom": "30px"})
+    ), style={"marginTop": "10px", "marginBottom": "30px"})
 ])
 
 
@@ -218,7 +218,7 @@ def update_wordcloud_histogram(dataframe_data):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=0)  # Adjust margins to ensure the text is visible
         )
         return fig
 
@@ -285,7 +285,7 @@ def update_wordcloud_histogram(dataframe_data):
         text=all_words,
         marker={'opacity': 0.3},
         textfont={'size': sizes, 'color': colors},
-        showlegend=False  # Hide the main scatter plot from the legend
+        showlegend=False,  # Hide the main scatter plot from the legend
     )
 
     fig = go.Figure(data=[data])
@@ -301,8 +301,8 @@ def update_wordcloud_histogram(dataframe_data):
         ))
 
     fig.update_layout(
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        xaxis=dict(range=[min(x)-2, max(x)+2], showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(range=[min(x), max(x)],showgrid=False, zeroline=False, showticklabels=False),
         margin=dict(b=0, l=0, r=0, t=0),
         showlegend=True,
         legend=dict(title="Labels", itemsizing='constant')
@@ -333,7 +333,7 @@ def update_label_histogram(dataframe_data, dataset_name, dataset_split):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=0)  # Adjust margins to ensure the text is visible
         )
         return fig
 
