@@ -21,6 +21,10 @@ try:
     polarity_train = pd.read_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     polarity_test = pd.read_parquet(DATA_FOLDER + TEST_DATA_PATH)
 
+    # This should be placed in the except block but now its backwards compatible 
+    polarity_train = polarity_train[["text", "label"]]
+    polarity_test = polarity_test[["text", "label"]]
+
 except FileNotFoundError as e:
     print("Downloading POLARITY dataset...")
     polarity_train1 = pd.read_parquet(POLARITY_DOWNLOAD_URL + TRAIN_DATA_PATH1)

@@ -137,7 +137,8 @@ def get_synonyms(word):
     Input('button-generate-prompts', 'n_clicks'),
     State('variant-store', 'data'),
     State('textarea-prompt', 'value'),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    running=[(Output("button-generate-prompts", "disabled"), True, False)]
 )
 def generate_prompts(generate_clicks, data, prompt):
     if not generate_clicks:
@@ -211,6 +212,8 @@ def clear_progressfile():
     with open(progress_file, 'w') as f:
         f.write('0')
 
+clear_progressfile()
+
 @callback(
     # Output('tested-prompts-container', 'children'),
     Output('generated-prompts-container', 'children', allow_duplicate=True),
@@ -220,7 +223,8 @@ def clear_progressfile():
     State('true-label', 'data'),
     State('prompt-list', 'data'),
     State('prompt-sample', 'children'),
-    prevent_initial_call = True
+    prevent_initial_call = True,
+    running=[(Output("button-test-prompts", "disabled"), True, False)],
 )
 def test_prompts(test_button, dataset_name, true_label, generated_prompts, text):
     if not test_button:
