@@ -337,15 +337,20 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             if score == 0 or i < start or i > end:
                 color = "rgb(255, 255, 255)"
 
-            style={"background-color": color, 'cursor': 'pointer'}
-        
+            style={"background-color": color}
+            id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"}
+            if i > end:
+                style['cursor'] = 'pointer'
+            else:
+                id = ''
+
             if i == clicked_pos:
                 style['textDecoration'] =  'underline'
                 style['fontWeight'] = 'bold'
-
+                
             colored_text.append(
                 html.Span(token,
-                          id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"},
+                          id=id,
                           style=style)
             )
          
@@ -359,7 +364,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         start = find_sublist_index(answer_tokens, sublist) + len(sublist)
         sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
         end = find_sublist_index(answer_tokens, sublist)
-        text =  [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'margin-right': '5px', 'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+        text =  [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
         return text[start:end], text[end + len(sublist):-2]
 
 
