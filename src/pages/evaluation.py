@@ -13,6 +13,10 @@ from sklearn.metrics import confusion_matrix
 evaluation = html.Div(children=[
     dcc.Store(id='prompt-predictions'),
     html.H1(children='Evaluation', style={'textAlign':'center'}),
+    html.P(children="""
+                    This section evaluates all the prompt on all the selected samples from the first section. 
+                    After testing all the prompts on the data, various interactive statistics will be shown.
+                    """),
     html.Button('Run prompts', id='run-all-prompts-btn'),
     dcc.Loading(
         id="loading-1",

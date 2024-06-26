@@ -16,6 +16,15 @@ progress_file = os.path.abspath('src/pages/progress.txt')
 
 prompt_engineering = html.Div(children=[
     html.H1(children='Prompt Engineering', style={'textAlign':'center'}),
+    html.P(children="""
+                    In this section you will create your prompts. 
+                    The first window allows you to select one sample from the selected data, 
+                    this sample will be used to test your prompts. Below you can define your prompt template.
+                    """),
+    html.P(children="""
+                    After clicking 'Generate prompts', all possible combinations of variants will be made.
+                    You can test all the prompts on the selected datasample by clicking 'Test prompts'.
+                    """),
     html.Div(children=[
         html.Div(
             className='selected-sample',
@@ -47,6 +56,7 @@ prompt_engineering = html.Div(children=[
 
     html.Div(children=[
         html.P("Create a prompt template:", style={"marginBottom": "5px"}),
+        html.Abbr("❔", title=  "The variant placeholders (e.g., {var1} and {var2}) will be replaced by the variants you defined in the field below. The {text} placeholder will be replaced by the sentence selected from the dataset.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
         dcc.Textarea(
             id='textarea-prompt',
             value='{var1} {text}\n\n{var2}',
@@ -61,7 +71,8 @@ prompt_engineering = html.Div(children=[
             children=[
                 html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
-                    html.Button('Remove selected variable', id='remove-variable-button')
+                    html.Button('Remove selected variable', id='remove-variable-button'),
+                    html.Abbr("❔", title="Add or remove as many {var} variables as you need.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
                 ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
                 dcc.Tabs(
                     content_style={"width": "100%", 'flex-direction':'column'},
@@ -76,7 +87,10 @@ prompt_engineering = html.Div(children=[
             children=[
                 html.Div(
                     id='tabs-content',
-                    children=[html.Button('Add variant', id='add-variant-button', n_clicks=0)],
+                    children=[
+                        html.Button('Add variant', id='add-variant-button', n_clicks=0),
+                        html.Abbr("❔", title="For every variable in your prompt you can write as many variants as you want. When generating the prompts, all possible combinations of variable variants are be made.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+                        ],
                     style={'display':'flex', 'justify-content':'center', 'padding': '10px 20px'}
                 ),
                 html.Div(id='variant-container', children=[], style={"marginBottom": "15px"}),
@@ -92,7 +106,9 @@ prompt_engineering = html.Div(children=[
             dcc.Store('true-label'),
             dcc.Store('results-dict'),
             html.Button('Generate prompts', id='button-generate-prompts'),
+            html.Abbr("❔", title="Generate Prompts: Create all possible prompts with defined variants.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
             html.Button('Test prompts', id='button-test-prompts'),
+            html.Abbr("❔", title="Add or remove as many {var} variables as you need.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
         ], 
         style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
