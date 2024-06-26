@@ -56,7 +56,7 @@ prompt_engineering = html.Div(children=[
 
     html.Div(children=[
         html.P("Create a prompt template:", style={"marginBottom": "5px", 'display':'inline-block'}),
-        html.Abbr("❔", title=  "The variant placeholders (e.g., {var1} and {var2}) will be replaced by the variants you defined in the field below. The {text} placeholder will be replaced by the sentence selected from the dataset.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+        html.Abbr("❔", title=  "The variant placeholders (e.g., {var1} and {var2}) will be replaced by the variants you defined in the field below. The {text} placeholder will be replaced by the sentence selected from the dataset."),
         dcc.Textarea(
             id='textarea-prompt',
             value='{var1} {text}\n\n{var2}',
@@ -71,8 +71,10 @@ prompt_engineering = html.Div(children=[
             children=[
                 html.Div(children=[
                     html.Button('Add variable', id='add-variable-button', n_clicks=0),
-                    html.Button('Remove selected variable', id='remove-variable-button'),
-                    html.Abbr("❔", title="Add or remove as many {var} variables as you need.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+                    html.Div([
+                        html.Button('Remove selected variable', id='remove-variable-button'),
+                        html.Abbr("❔", title="Add or remove as many {var} variables as you need."),
+                    ])
                 ], style={'display': 'flex', 'gap': '15px', 'padding': '10px 20px', 'justifyContent': 'center'}),
                 dcc.Tabs(
                     content_style={"width": "100%", 'flex-direction':'column'},
@@ -89,7 +91,7 @@ prompt_engineering = html.Div(children=[
                     id='tabs-content',
                     children=[
                         html.Button('Add variant', id='add-variant-button', n_clicks=0),
-                        html.Abbr("❔", title="For every variable in your prompt you can write as many variants as you want. When generating the prompts, all possible combinations of variable variants are be made.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+                        html.Abbr("❔", title="For every variable in your prompt you can write as many variants as you want. When generating the prompts, all possible combinations of variable variants are be made."),
                         ],
                     style={'display':'flex', 'justify-content':'center', 'padding': '10px 20px'}
                 ),
@@ -105,10 +107,14 @@ prompt_engineering = html.Div(children=[
             dcc.Store('prompt-list'),
             dcc.Store('true-label'),
             dcc.Store('results-dict'),
-            html.Button('Generate prompts', id='button-generate-prompts'),
-            html.Abbr("❔", title="Generate Prompts: Create all possible prompts with defined variants.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
-            html.Button('Test prompts', id='button-test-prompts'),
-            html.Abbr("❔", title="Add or remove as many {var} variables as you need.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+            html.Div([
+                html.Button('Generate prompts', id='button-generate-prompts'),
+                html.Abbr("❔", title="Generate Prompts: Create all possible prompts with defined variants."),
+            ]),
+            html.Div([
+                html.Button('Test prompts', id='button-test-prompts'),
+                html.Abbr("❔", title="Add or remove as many {var} variables as you need."),
+            ])
         ], 
         style={'width':'100%', 'margin': '20px 0px', 'display': 'flex', 'gap': '15px', 'alignItems': 'center', 'justifyContent': 'center'}
     ),
@@ -126,7 +132,7 @@ prompt_engineering = html.Div(children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
     
     html.P("Attention visualizer:", style={"marginBottom": "5px", 'display':'inline-block'}),
-    html.Abbr("❔", title=  "Click part of the models output text to view the corresponding attention scores of the input. Green and red highlights indicate high and low attention scores respectively.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+    html.Abbr("❔", title=  "Click part of the models output text to view the corresponding attention scores of the input. Green and red highlights indicate high and low attention scores respectively."),
     
     html.Div(style={'width': '100%', 'border': '1px solid #ccc',}, children=[
         html.Div(children = [

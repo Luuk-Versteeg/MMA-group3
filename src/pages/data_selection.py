@@ -14,11 +14,6 @@ from widgets import histogram
 from dataloaders.load_data import datasets
 from wordcloud import WordCloud
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import re
-
 
 data_selection = html.Div(children=[
     html.H1(children='Data selection', style={'textAlign': 'center'}),
@@ -35,15 +30,15 @@ data_selection = html.Div(children=[
                     dbc.Input(type="number", min=0, value=10, max=100, step=1, id="n-samples"),
                     html.P(children="(max: )", id="max-samples"),
                     html.Button("Resample", id="resample")
-                ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
-                html.Button("Preprocess", id="preprocess", style={"marginTop": "10px"}),
+                ], style={"display": "flex", "gap": "10px", "alignItems": "center", "marginBottom": "0px"}),
+                html.Button("Preprocess", id="preprocess"),
                 html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")            ]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"})
         ], style={"width": "48%"}),
         html.Div(dcc.Tabs(children=[
             dcc.Tab(label="Labels", children=histogram.create_histogram(id="label-histogram")),
-            dcc.Tab(label="Words frequency", children=histogram.create_histogram(id="wordcloud"))
+            dcc.Tab(label="Words frequency", children=histogram.create_histogram(id="wordcloud"), className="wordcloud")
         ]), style={"width": "48%"})
     ], style={"display": "flex", "justifyContent": "space-between"}),
     html.Div(children=dash_ag_grid.AgGrid(
@@ -242,7 +237,7 @@ def update_wordcloud_histogram(dataframe_data):
         return word_colors.get(word, "black")
 
     # Generate the word cloud image with custom coloring
-    wc = WordCloud(width=800, height=400, background_color='white', color_func=color_func).generate_from_frequencies(word_frequencies)
+    wc = WordCloud(width=500, height=600, background_color='white', color_func=color_func).generate_from_frequencies(word_frequencies)
 
     # Convert the word cloud image to a Plotly figure
     fig = go.Figure()
@@ -253,13 +248,13 @@ def update_wordcloud_histogram(dataframe_data):
             xref="x",
             yref="y",
             x=0,
-            y=1,
-            sizex=1,
-            sizey=1,
+            y=3.5,
+            sizex=5,
+            sizey=5,
             xanchor="left",
             yanchor="top",
             layer="below"
-        )
+        ),
     )
 
     # Add invisible scatter plots for legend entries
@@ -274,11 +269,13 @@ def update_wordcloud_histogram(dataframe_data):
 
     # Update layout to hide axes and show legend
     fig.update_layout(
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, fixedrange=True),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, fixedrange=True),
         margin=dict(b=0, l=0, r=0, t=0),
         showlegend=True,
-        legend=dict(title="Labels", itemsizing='constant')
+        legend=dict(title="Labels", itemsizing='constant'),
+        hovermode=False,
+        clickmode=None,
     )
 
     return fig

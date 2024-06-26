@@ -60,3 +60,19 @@ body {
     width: 200px; /* Adjust width for larger pop-up */
     text-align: center;
 }
+
+.legendtoggle {
+    cursor: default;
+    pointer-events: none;
+}
+
+abbr {
+    color: transparent;
+    text-shadow: 0 0 0 #636efa;
+    text-decoration: none;
+    margin-left: 5px;
+}
+
+abbr:hover {
+    text-shadow: 0 0 0 #333;
+}
