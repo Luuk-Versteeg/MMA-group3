@@ -310,7 +310,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         attention_scores = np.array(attention_scores)
         prompt_scores = attention_scores[start:end]
         normalized_scores = (attention_scores - prompt_scores.min()) / (prompt_scores.max() - prompt_scores.min())
-        mean_score = np.median(normalized_scores[start:end])
+        mean_score = np.mean(normalized_scores[start:end])
+        max_score = np.max(normalized_scores[start:end])
         print("\n\n\n----------------")
         print(answer_tokens)    
         print("\n")  
@@ -318,13 +319,15 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
         colored_text = []
         for i, (token, score) in enumerate(zip(answer_tokens, normalized_scores)):
-            #color = f"rgb({int(255 * (1 - score))}, {int(255 * score)}, 255)"  # Gradient from red to green
             if score >= mean_score:
-                lerp = int(255 * (1 - (score - mean_score) / mean_score))
-                color = f"rgb(255, {lerp}, {lerp})"
+                # lightGreen: rgb(144, 238, 144)
+                t = (score - mean_score) / (max_score - mean_score)
+                color = f"rgb({lerp(255, 144, t)}, {lerp(255, 238, t)}, {lerp(255, 144, t)})"
+                #color = f"rgb(144, 238, 144)"
             else:
-                lerp = int(255 * score / mean_score)
-                color = f"rgb({lerp}, 255, {lerp})"
+                # lightCoral: rgb(240, 128, 128)
+                t = score / mean_score
+                color = f"rgb({lerp(240, 255, t)}, {lerp(128, 255, t)}, {lerp(128, 255, t)})"
 
             if score == 0 or i < start or i > end:
                 color = "rgb(255, 255, 255)"
@@ -365,6 +368,11 @@ def find_sublist_index(biglist, sublist):
     for idx in range(0, end):
         if sublist == biglist[idx:idx+len(sublist)]:
             return idx
+
+
+def lerp(a, b, t):
+    return t * a + (1 - t) * b
+
 
 @callback(
     Output('variant-container', 'children'),
