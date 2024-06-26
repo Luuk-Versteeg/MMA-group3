@@ -1,5 +1,6 @@
 import nltk
 from nltk.corpus import stopwords, wordnet
+from nltk.tokenize import RegexpTokenizer
 from nltk import word_tokenize
 import random
 from dash import html
@@ -100,3 +101,17 @@ def display_colored_text(n_clicks):
         )
     
     return colored_text
+
+def preprocess_text(text):
+    # Tokenize the text into words
+    tokenizer = RegexpTokenizer(r'\w+')
+    tokenized_1 = tokenizer.tokenize(text.lower())
+    words = word_tokenize(' '.join(tokenized_1))
+
+    # Define the stopwords and punctuation
+    stop_words = set(stopwords.words('english'))
+
+    # Remove stopwords and punctuation
+    tokens = [word for word in words if word not in stop_words]
+
+    return ' '.join(tokens)

@@ -1,4 +1,4 @@
-from dash import html, dcc, Output, Input, callback, State
+from dash import html, dcc, Output, Input, callback, State, callback_context 
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import dash_ag_grid
@@ -8,11 +8,16 @@ import plotly
 import random
 from collections import Counter
 
-from .utils import add_synonyms, filter_text
+from .utils import add_synonyms, filter_text, preprocess_text
 
 from widgets import histogram
 from dataloaders.load_data import datasets
 from wordcloud import WordCloud
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import re
 
 
 data_selection = html.Div(children=[
@@ -29,6 +34,7 @@ data_selection = html.Div(children=[
                     html.P(children="(max: )", id="max-samples"),
                     html.Button("Resample", id="resample")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center"}),
+                html.Button("Preprocess", id="preprocess", style={"marginTop": "10px"}),
                 html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")            ]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"})
@@ -89,21 +95,30 @@ def update_dataset_details(dataset_name):
     Input("dataset-selection", "value"),
     Input("dataset-split", "value"),
     Input("n-samples", "value"),
-    Input("resample", "n_clicks")
+    Input("resample", "n_clicks"),
+    Input("preprocess", "n_clicks"),
+    State("selected-dataset", "data")
 )
-
-
-def update_selected_dataset(dataset_name, dataset_split, n_samples, _):
+def update_selected_dataset(dataset_name, dataset_split, n_samples, resample_clicks, preprocess_clicks, current_data):
+    ctx = callback_context
     if not dataset_name or not dataset_split:
         return
-
+    
     dataset = select_dataset(dataset_name)
     if dataset_split not in dataset["data"].keys():
         return
 
-    samples = dataset["data"][dataset_split].sample(n_samples)
-    return samples.to_dict()
+    # Check which button was clicked
+    if ctx.triggered and 'preprocess' in ctx.triggered[0]['prop_id']:
+        if current_data:
+            samples = pd.DataFrame.from_dict(current_data)
+            samples['text'] = samples['text'].apply(preprocess_text)
+        else:
+            return
+    else:
+        samples = dataset["data"][dataset_split].sample(n_samples)
 
+    return samples.to_dict()
 
 @callback(
     Output("samples-table", "columnDefs"),
