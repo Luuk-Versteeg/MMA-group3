@@ -214,7 +214,7 @@ def generate_prompts(generate_clicks, data, prompt):
         generated_prompts.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)},
             children=prompt_lines,
-            style={'border': '1px solid #000', 'height': 200, 'width': 200, 'padding': 15, 'boxSizing': 'border-box', 'display': 'inline-block'}
+            style={'border': '1px solid #000', 'width': 200, 'padding': 15, 'boxSizing': 'border-box', 'display': 'inline-block'}
         ))
 
     return generated_prompts, prompt_list
@@ -437,9 +437,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             if token == ' ':
                 text.append(html.Span(' '))
                 continue
-            else: 
-                j += 1
-
             if token == '\n':
                 text.append(html.Br())
                 continue
@@ -447,6 +444,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
             style={'cursor': 'pointer'}
             text.append(html.Span(token, id=id, style=style))
+
+            j += 1
 
         prompt = text[start:end]
         answer = text[end + len(sublist):-2]
