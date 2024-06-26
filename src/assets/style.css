@@ -76,3 +76,25 @@ abbr {
 abbr:hover {
     text-shadow: 0 0 0 #333;
 }
+
+/* (Modified) source: https://getcssscan.com/css-buttons-examples  */
+button {
+  background-color: #3b76ff;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  padding: 7px 1.4em;
+}
+
+button:hover,
+button:focus {
+  background-color: rgb(8, 74, 197);
+}
+
+button:active {
+    background-color: #3b76ff; 
+    box-shadow: none; /* Remove the inset shadow */
+}

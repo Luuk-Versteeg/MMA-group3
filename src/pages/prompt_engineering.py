@@ -351,7 +351,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         mean_score = np.mean(normalized_scores[start:end])
         max_score = np.max(normalized_scores[start:end])
 
-        spaces_indices = [i for i, tok in enumerate(answer_tokens) if tok == " "]
         colored_text = []
         extended_scores = []
 
@@ -368,7 +367,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                 extended_scores.append(normalized_scores[j])
                 j += 1
 
-        print("QWERT", len(extended_scores))
         j = 0
         for i, (token, score) in enumerate(zip(answer_tokens_with_spaces, extended_scores)):
             if token == ' ':
@@ -413,11 +411,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
 
         prompt = colored_text[start:end]
-        print("TESTTTT", answer_tokens_with_spaces)
-        print("TEST 2  ", len(colored_text), len(answer_tokens_with_spaces))
         answer = colored_text[end + len(sublist):-2]
 
-            
         return prompt, answer
     # Pressed attention button.
     else:
@@ -425,11 +420,9 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         answer_tokens_with_spaces = results_dict[str(ctx_id['index'])][2]
         answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
-        #sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
         sublist = ['</s>', ' ', '', '\n', '<', '|', 'user', '|', '>']
         print("answer_tokens", answer_tokens)
         start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
-        #sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
         sublist = [ '</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']        
         end = find_sublist_index(answer_tokens_with_spaces, sublist)
 
@@ -454,7 +447,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
         prompt = text[start:end]
         answer = text[end + len(sublist):-2]
-        
+
         return prompt, answer
 
 
