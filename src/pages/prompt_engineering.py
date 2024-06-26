@@ -329,7 +329,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         clicked_pos = int(clicked_pos)
 
         scores_lists = results_dict[str(prompt_idx)][3]
-        answer_tokens = results_dict[str(prompt_idx)][2]
+        answer_tokens_with_spaces = results_dict[str(prompt_idx)][2]
+        answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
         # Find relevant parts of output.    
         sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
@@ -343,16 +344,35 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         normalized_scores = (attention_scores - prompt_scores.min()) / (prompt_scores.max() - prompt_scores.min())
         mean_score = np.mean(normalized_scores[start:end])
         max_score = np.max(normalized_scores[start:end])
-        print("\n\n\n----------------")
-        print(answer_tokens)    
-        print("\nPrediction")  
-        print(answer_tokens[start:end]) 
-        print("\nPrompt")
-        print(answer_tokens[end:])
 
-
+        spaces_indices = [i for i, tok in enumerate(answer_tokens) if tok == " "]
         colored_text = []
-        for i, (token, score) in enumerate(zip(answer_tokens, normalized_scores)):
+        extended_scores = []
+
+        sublist = ['</s>', ' ', '', '\n', '<', '|', 'user', '|', '>']
+        start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
+        sublist = ['</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
+        end = find_sublist_index(answer_tokens_with_spaces, sublist)
+
+        j = 0
+        for i, tok in enumerate(answer_tokens_with_spaces):
+            if tok == ' ':
+                extended_scores.append(None)
+            else:
+                extended_scores.append(normalized_scores[j])
+                j += 1
+
+        print("QWERT", len(extended_scores))
+        j = 0
+        for i, (token, score) in enumerate(zip(answer_tokens_with_spaces, extended_scores)):
+            if token == ' ':
+                colored_text.append(html.Span(token))
+                continue
+            elif token == '\n':
+                colored_text.append(html.Br())
+                continue
+
+
             if score >= mean_score:
                 # lightGreen: rgb(144, 238, 144)
                 t = (score - mean_score) / (max_score - mean_score)
@@ -367,14 +387,11 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                 color = "rgb(255, 255, 255)"
 
             style={"background-color": color}
-            id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"}
+            id={'type':'token', 'index':f"{prompt_idx}---{j}---{token}"}
+            j += 1
 
-
-
-            # 'margin-right': '5px',
             if i > end:
                 style['cursor'] = 'pointer'
-                style['margin-right'] = '5px'
             else:
                 id = ''
 
@@ -387,24 +404,51 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                           id=id,
                           style=style)
             )
-         
-        return colored_text[start:end], colored_text[end + len(sublist):-2]
+
+
+        prompt = colored_text[start:end]
+        print("TESTTTT", answer_tokens_with_spaces)
+        print("TEST 2  ", len(colored_text), len(answer_tokens_with_spaces))
+        answer = colored_text[end + len(sublist):-2]
+
+            
+        return prompt, answer
     # Pressed attention button.
     else:
         full_prompt = results_dict[str(ctx_id['index'])][0]
-        answer_tokens = results_dict[str(ctx_id['index'])][2]
+        answer_tokens_with_spaces = results_dict[str(ctx_id['index'])][2]
+        answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
-        #print("PROOOMPT", prompt)
-        #for in 
+        #sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
+        sublist = ['</s>', ' ', '', '\n', '<', '|', 'user', '|', '>']
+        print("answer_tokens", answer_tokens)
+        start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
+        #sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
+        sublist = [ '</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']        
+        end = find_sublist_index(answer_tokens_with_spaces, sublist)
 
-        sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
-        start = find_sublist_index(answer_tokens, sublist) + len(sublist)
-        sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
-        end = find_sublist_index(answer_tokens, sublist)
-        text = [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
-        
-        prompt  =text[start:end]
+        #text = []
+
+        text = []
+        j = 0
+        for i, token in enumerate(answer_tokens_with_spaces):
+            if token == ' ':
+                text.append(html.Span(' '))
+                continue
+            else: 
+                j += 1
+
+            if token == '\n':
+                text.append(html.Br())
+                continue
+            
+            id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
+            style={'cursor': 'pointer'}
+            text.append(html.Span(token, id=id, style=style))
+
+        prompt = text[start:end]
         answer = text[end + len(sublist):-2]
+        
         return prompt, answer
 
 

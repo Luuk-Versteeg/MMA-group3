@@ -234,7 +234,7 @@ def select_prompt_attention(words, att_matrix):
 
     att_data = []
 
-    for index, word in enumerate(words):
+    for index, word in enumerate(filter(lambda w: w != ' ', words)):
         att_data.append([word, att_matrix[index].tolist()])
 
     return att_data
