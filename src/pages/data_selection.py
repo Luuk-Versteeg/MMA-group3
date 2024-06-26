@@ -16,7 +16,7 @@ from wordcloud import WordCloud
 
 
 data_selection = html.Div(children=[
-    html.H1(children='Data selection', style={'textAlign': 'center'}),
+    html.H1(children='Data Selection', style={'textAlign': 'center'}),
     html.P(children='This section allows you to select a dataset. For each available dataset, you can select a subset (e.g., train, validation, test). The selected dataset and the chosen number of samples will be used throughout the other sections. This data will be used to engineer and evaluate your prompt(s).'),
     html.P(children='For every selected subset and number of samples, statistics such as word frequency and label distribution will be shown.'),
     html.Div(children=[

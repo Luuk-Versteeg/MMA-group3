@@ -12,17 +12,27 @@ from sklearn.metrics import confusion_matrix
 
 evaluation = html.Div(children=[
     dcc.Store(id='prompt-predictions'),
-    html.H1(children='Evaluation', style={'textAlign':'center'}),
+    html.H1(children='Prompt Evaluation', style={'textAlign':'center'}),
     html.P(children="""
                     This section evaluates all the prompt on all the selected samples from the first section. 
                     After testing all the prompts on the data, various interactive statistics will be shown.
                     """),
-    html.Button('Run prompts', id='run-all-prompts-btn'),
-    dcc.Loading(
-        id="loading-1",
-        type="default",
-        children=html.Div(id="loading-output-1")
-    ),
+    html.Div([
+        html.Div([
+            html.Div([
+                html.P("Used dataset: AGNEWS (train)"),
+                html.P("Total number of prompts created: 10"),
+                html.P("Labels: World, Sports, Business and Sci/Tech"),
+            ]),
+            html.Button('Run prompts', id='run-all-prompts-btn'),
+        ], style={"width": "48%"}),
+        html.Div(
+            id="confusion-matrix-container", 
+            children=dcc.Graph(id="confusion-matrix",  figure = {},),
+            style={"width": "48%"}
+        ),
+    ], style={"display": "flex", "justifyContent": "space-between"}),
+
     dcc.Loading(
         html.Div(children=dash_ag_grid.AgGrid(
             columnDefs=[],
@@ -40,13 +50,13 @@ evaluation = html.Div(children=[
         style={"marginTop": "30px", "marginBottom": "30px"}),
         id="loading-evaluation"
     ),
-    html.Div(id="eval-prompts-container", style={'width':'100%',  "border": "1px solid black", 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}, children=[]),
-    html.Div(id="confusion-matrix-container", 
-             children=dcc.Graph(
-                 id="confusion-matrix",
-                 figure = {},
-                 )
-                 , style={"marginTop": "30px", "marginBottom": "30px", "width": "500px"})
+    html.Div(
+        id="eval-prompts-container", 
+        style={'width':'100%',  "border": "1px solid black", 'maxHeight': '300px', 
+               'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 
+               'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'
+               }, 
+        children=[]),
     ])
 
 
@@ -58,7 +68,8 @@ evaluation = html.Div(children=[
     State("dataset-selection", "value"),
     State("selected-dataset", "data"),
     State('prompt-list', 'data'),
-    State("samples-table", "rowData")
+    State("samples-table", "rowData"),
+    running=[(Output("run-all-prompts-btn", "disabled"), True, False)]
 )
 def update_evaluation_table(button_clicked, dataset_name, selected_dataset, prompt_list, samples):
     ctx_id = ctx.triggered_id
@@ -170,7 +181,7 @@ def update_confusion_matrix(selected_rows, dataset_name, prediction_dict):
                     font=dict(size=28, color="gray")
                 )
             ],
-            margin=dict(b=0, l=0, r=0, t=100)  # Adjust margins to ensure the text is visible
+            margin=dict(b=0, l=0, r=0, t=0)  # Adjust margins to ensure the text is visible
         )
         return fig, []
 
