@@ -10,16 +10,12 @@ body {
     /* display: block; */
     width: calc(100vw - 80px);
     margin: 0px 40px;
+    overflow: hidden;
 }
 
 .box {
-    border: 1px solid black;
-    color: #333; /* Set the text color */
-    font-size: 16px; /* Set the font size */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    overflow: hidden; /* Hide any content that overflows the box */
-    white-space: normal; /* Allow the text to wrap to the next line */
-    word-wrap: break-word; /* Break long words to fit within the box */
+    border: 1px solid rgb(140, 180, 255);
+    word-wrap: break-word;  
 }
 
 .synonym-token {
@@ -96,5 +92,10 @@ button:focus {
 
 button:active {
     background-color: #3b76ff; 
-    box-shadow: none; /* Remove the inset shadow */
+    box-shadow: none;
 }
+
+button:disabled {
+    background-color: rgb(8, 74, 197);
+  }
+  

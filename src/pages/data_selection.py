@@ -34,7 +34,7 @@ data_selection = html.Div(children=[
                 html.Button("Preprocess", id="preprocess"),
                 html.P(id="dataset-description"),
                 html.P(children=f'Scheme:', id="dataset-scheme")            ]),
-            html.Div(id="selected-sample", style={"padding": "15px 30px", "border": "1px solid black", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"})
+            html.Div(id="selected-sample", style={"padding": "15px 30px", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"}, className='box')
         ], style={"width": "48%"}),
         html.Div(dcc.Tabs(children=[
             dcc.Tab(label="Labels", children=histogram.create_histogram(id="label-histogram")),

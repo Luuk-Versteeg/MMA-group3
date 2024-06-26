@@ -32,8 +32,9 @@ prompt_engineering = html.Div(children=[
                 html.Button('<', id='button-left', style={"padding": "30px"}),
                 html.Div(id="prompt-sample", 
                          children=" Improved Pitching Has the Keys Finishing on an Upswing As the season winds down for the Frederick Keys, Manager Tom Lawless is starting to enjoy the progress his pitching staff has made this season.",
-                         style={"padding": "15px 30px", "border": "1px solid black", "width": "100%", 
-                                "minHeight": "100px", "display": "flex", "alignItems": "center", "justifyContent": "center"}),
+                         style={"padding": "15px 30px", "width": "100%", 
+                                "minHeight": "100px", "display": "flex", "alignItems": "center", "justifyContent": "center"},
+                                className='box'),
                 html.Button('>', id='button-right', style={"padding": "30px"}),
                 dcc.Store(id="prompt-sample-text")
             ],
@@ -134,10 +135,11 @@ prompt_engineering = html.Div(children=[
     html.P("Attention visualizer:", style={"marginBottom": "5px", 'display':'inline-block'}),
     html.Abbr("❔", title=  "Click part of the models output text to view the corresponding attention scores of the input. Green and red highlights indicate high and low attention scores respectively."),
     
-    html.Div(style={'width': '100%', 'border': '1px solid #ccc',}, children=[
+    html.Div(style={'width': '100%'}, className='box', children=[
         html.Div(children = [
-            html.Div("PROMPT", style={'text-align':'center'}),
-            html.Div("No prompt tested...", id='full-prompt', style={'width': '100%', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
+            html.Div("PROMPT", style={'text-align':'center', 'padding': '20px'}),
+            html.Div("No prompt tested...", id='full-prompt', 
+                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
         ]),
         html.Div(style={
             'width': '100%',
@@ -146,8 +148,9 @@ prompt_engineering = html.Div(children=[
             'margin': '10px 0'  # Adjust margin as needed
         }),
          html.Div(children = [
-            html.Div("ANSWER", style={'text-align':'center'}),
-            html.Div("No prompt tested...", id='full-answer', style={'width': '100%', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
+            html.Div("ANSWER", style={'text-align':'center', 'padding': '20px'}),
+            html.Div("No prompt tested...", id='full-answer', 
+                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
         ]),
     ])
 ])
@@ -392,14 +395,13 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
 
             style={"background-color": color}
             id={'type':'token', 'index':f"{prompt_idx}---{j}---{token}"}
-            j += 1
 
             if i > end:
                 style['cursor'] = 'pointer'
             else:
                 id = ''
 
-            if i == clicked_pos:
+            if j == clicked_pos:
                 style['textDecoration'] =  'underline'
                 style['fontWeight'] = 'bold'
                 
@@ -409,6 +411,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                           style=style)
             )
 
+            j += 1
 
         prompt = colored_text[start:end]
         answer = colored_text[end + len(sublist):-2]
