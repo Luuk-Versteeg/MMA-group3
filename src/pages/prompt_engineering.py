@@ -125,15 +125,24 @@ prompt_engineering = html.Div(children=[
         #html.Div(children='test prompt')
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
     
-    html.Div(style={'width': '100%'}, children=[
-        html.Div('Prompt:', id='full-prompt', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
+    html.P("Attention visualizer:", style={"marginBottom": "5px", 'display':'inline-block'}),
+    html.Abbr("❔", title=  "Click part of the models output text to view the corresponding attention scores of the input. Green and red highlights indicate high and low attention scores respectively.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
+    
+    html.Div(style={'width': '100%', 'border': '1px solid #ccc',}, children=[
+        html.Div(children = [
+            html.Div("PROMPT", style={'text-align':'center'}),
+            html.Div("No prompt tested...", id='full-prompt', style={'width': '100%', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
+        ]),
         html.Div(style={
             'width': '100%',
             'height': '1px',
             'background-color': '#000',  # Black color for the line
             'margin': '10px 0'  # Adjust margin as needed
         }),
-        html.Div('Answer:', id='full-answer', style={'width': '100%', 'border': '1px solid #ccc', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
+         html.Div(children = [
+            html.Div("ANSWER", style={'text-align':'center'}),
+            html.Div("No prompt tested...", id='full-answer', style={'width': '100%', 'padding': '10px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
+        ]),
     ])
 ])
 
@@ -246,17 +255,21 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
     pred_labels = []
     pred_words = []
     pred_attentions = []
+    full_prompts = []
     n_total = len(generated_prompts)
     clear_progressfile()
 
     if snellius:
         with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
-            future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
+            full_prompt = prompt.format(text=text)
+
+            future_to_prompt = {executor.submit(classifier, full_prompt): prompt for prompt in generated_prompts}
             for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
                 label, words, att_data = future.result()
                 pred_labels.append(label)
                 pred_words.append(words)
                 pred_attentions.append(att_data)
+                full_prompts.append(full_prompt)
                 update_progressfile(((i+1)/n_total)*100)
     else:
         for i, prompt in tqdm(enumerate(generated_prompts)):
@@ -265,14 +278,16 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
             pred_labels.append(pred_label)
             pred_words.append(words)
             pred_attentions.append(att_data)
+            full_prompts.append(prompt)
+
             update_progressfile(((i+1)/n_total)*100)
 
     results_dict = {}
 
     # Convert to list of lines with html.Br() instead of \n.
     colored_prompt_divs = []
-    for idx, (pred_label, pred_word, pred_attention, new_prompt) in enumerate(zip(pred_labels, pred_words, pred_attentions, generated_prompts)):
-        results_dict[idx] = [new_prompt, pred_label, pred_word, pred_attention]
+    for idx, (pred_label, pred_word, pred_attention, new_prompt, full_prompt) in enumerate(zip(pred_labels, pred_words, pred_attentions, generated_prompts, full_prompts)):
+        results_dict[idx] = [full_prompt, pred_label, pred_word, pred_attention]
         
         if pred_label == true_label:
             color='LightGreen' 
@@ -330,8 +345,11 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         max_score = np.max(normalized_scores[start:end])
         print("\n\n\n----------------")
         print(answer_tokens)    
-        print("\n")  
+        print("\nPrediction")  
         print(answer_tokens[start:end]) 
+        print("\nPrompt")
+        print(answer_tokens[end:])
+
 
         colored_text = []
         for i, (token, score) in enumerate(zip(answer_tokens, normalized_scores)):
@@ -339,19 +357,24 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                 # lightGreen: rgb(144, 238, 144)
                 t = (score - mean_score) / (max_score - mean_score)
                 color = f"rgb({lerp(255, 144, t)}, {lerp(255, 238, t)}, {lerp(255, 144, t)})"
-                #color = f"rgb(144, 238, 144)"
             else:
                 # lightCoral: rgb(240, 128, 128)
                 t = score / mean_score
                 color = f"rgb({lerp(240, 255, t)}, {lerp(128, 255, t)}, {lerp(128, 255, t)})"
 
+            
             if score == 0 or i < start or i > end:
                 color = "rgb(255, 255, 255)"
 
             style={"background-color": color}
             id={'type':'token', 'index':f"{prompt_idx}---{i}---{token}"}
+
+
+
+            # 'margin-right': '5px',
             if i > end:
                 style['cursor'] = 'pointer'
+                style['margin-right'] = '5px'
             else:
                 id = ''
 
@@ -368,15 +391,21 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         return colored_text[start:end], colored_text[end + len(sublist):-2]
     # Pressed attention button.
     else:
-        prompt = results_dict[str(ctx_id['index'])][0]
+        full_prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens = results_dict[str(ctx_id['index'])][2]
+
+        #print("PROOOMPT", prompt)
+        #for in 
 
         sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
         start = find_sublist_index(answer_tokens, sublist) + len(sublist)
         sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
         end = find_sublist_index(answer_tokens, sublist)
-        text =  [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
-        return text[start:end], text[end + len(sublist):-2]
+        text = [html.Span(token, id={'type': 'token', 'index':f"{ctx_id['index']}---{i}---{token}"}, style={'cursor': 'pointer'}) for i, token in enumerate(answer_tokens)]
+        
+        prompt  =text[start:end]
+        answer = text[end + len(sublist):-2]
+        return prompt, answer
 
 
 def find_sublist_index(biglist, sublist):
