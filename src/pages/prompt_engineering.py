@@ -55,7 +55,7 @@ prompt_engineering = html.Div(children=[
     ),
 
     html.Div(children=[
-        html.P("Create a prompt template:", style={"marginBottom": "5px"}),
+        html.P("Create a prompt template:", style={"marginBottom": "5px", 'display':'inline-block'}),
         html.Abbr("❔", title=  "The variant placeholders (e.g., {var1} and {var2}) will be replaced by the variants you defined in the field below. The {text} placeholder will be replaced by the sentence selected from the dataset.", style={'color':'transparent', 'text-shadow':'0 0 0 #636efa'}),
         dcc.Textarea(
             id='textarea-prompt',
