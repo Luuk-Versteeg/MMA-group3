@@ -312,7 +312,7 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
             children=prompt_lines + [html.Button('Attention', id={'type': 'prompt-attention-button', 'index': int(idx)})],
-            style={'border':'1px solid #000', 'height':200, 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color}))
+            style={'border':'1px solid #000', 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color}))
 
     return colored_prompt_divs, results_dict
 
