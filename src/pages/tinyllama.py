@@ -193,7 +193,24 @@ def process_attentions(seq_in, seq_out, scores, pipe):
 
     words = [pipe.tokenizer.decode(t) for t in seq_in] + words
 
-    return words, att_matrix
+    string = pipe.tokenizer.decode(seq_out)
+    spaces = [i for i,char in enumerate(string) if char == " "]
+
+    count = 0
+    spaces_placed = 0
+    words_with_spaces = words.copy()
+
+    for index, word in enumerate(words):
+
+        count += len(word)
+
+        if count+1 in spaces:
+            words_with_spaces.insert(index+1+spaces_placed, " ")
+            spaces.remove(count+1)
+            spaces_placed += 1
+            count += 1
+
+    return words_with_spaces, att_matrix
 
 
 def find_subsequence(main_seq, sub_seq):
