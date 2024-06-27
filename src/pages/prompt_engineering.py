@@ -330,32 +330,37 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         prompt_idx, clicked_pos, clicked_token = ctx_id['index'].split("---")
         clicked_pos = int(clicked_pos)
 
+        # Retrieve attention scores and tokens (with and without spaces).
         scores_lists = results_dict[str(prompt_idx)][3]
         answer_tokens_with_spaces = results_dict[str(prompt_idx)][2]
         answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
-        # Find relevant parts of output.    
+        # Find relevant parts of output (prompt & output).    
         sublist = ['</s>', '', '\n', '<', '|', 'user', '|', '>']
         start = find_sublist_index(answer_tokens, sublist) + len(sublist)
         sublist = ['</s>', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
         end = find_sublist_index(answer_tokens, sublist)
 
+        # Get the attention score list of the clicked token. 
         attention_scores = scores_lists[clicked_pos][1]
         attention_scores = np.array(attention_scores)
+        
+        # Calculate the normalized scores, mean and max.
+        # This is done only for the prompt tokens (not output tokens). 
         prompt_scores = attention_scores[start:end]
         normalized_scores = (attention_scores - prompt_scores.min()) / (prompt_scores.max() - prompt_scores.min())
         mean_score = np.mean(normalized_scores[start:end])
         max_score = np.max(normalized_scores[start:end])
 
-        colored_text = []
-        extended_scores = []
-
+        # Define the beginning and end of the prompt tokens in the list.
         sublist = ['</s>', ' ', '', '\n', '<', '|', 'user', '|', '>']
         start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
         sublist = ['</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']
         end = find_sublist_index(answer_tokens_with_spaces, sublist)
 
+        # Add "None" score for space tokens.
         j = 0
+        extended_scores = []
         for i, tok in enumerate(answer_tokens_with_spaces):
             if tok == ' ':
                 extended_scores.append(None)
@@ -363,47 +368,57 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                 extended_scores.append(normalized_scores[j])
                 j += 1
 
-        j = 0
+        # Count excluding spaces.
+        j = 0    
+        # Loop over tokens and put the proper html elements in the list.
+        colored_text = []
         for i, (token, score) in enumerate(zip(answer_tokens_with_spaces, extended_scores)):
+            # Add Span/Br if the token is a space or newline.
             if token == ' ':
-                colored_text.append(html.Span(token))
+                colored_text.append(html.Span(' '))
                 continue
             elif token == '\n':
                 colored_text.append(html.Br())
                 continue
 
-
+            # Calculate the background color of tokens based on their attention scores.
             if score >= mean_score:
-                # lightGreen: rgb(144, 238, 144)
+                # Interpolate between white and green for tokens that have a score higher than the mean.
                 t = (score - mean_score) / (max_score - mean_score)
+                # lightGreen: rgb(144, 238, 144)
                 color = f"rgb({lerp(255, 144, t)}, {lerp(255, 238, t)}, {lerp(255, 144, t)})"
             else:
-                # lightCoral: rgb(240, 128, 128)
+                # Interpolate between red and white for tokens that have a score lower than the mean.
                 t = score / mean_score
+                # lightCoral: rgb(240, 128, 128)
                 color = f"rgb({lerp(240, 255, t)}, {lerp(128, 255, t)}, {lerp(128, 255, t)})"
 
-            
+            # Make tokens with zero attention black.
             if score == 0 or i < start or i > end:
                 color = "rgb(255, 255, 255)"
 
-            style={"background-color": color}
-            id={'type':'token', 'index':f"{prompt_idx}---{j}---{token}"}
-
+            style={"background-color":color}
+            tok_class=''
+            id = ''
+            # If the current token is part of the model output
             if i > end + len(sublist):
-                style['cursor'] = 'pointer'
-            else:
-                id = ''
+                # Make it hoverable.
+                tok_class='prompt-output'
+                # Make it clickable by giving it the token id
+                id={'type':'token', 'index':f"{prompt_idx}---{j}---{token}"}
+                style={"cursor": 'pointer'}
 
-
+            # If the current token is clicked, make it bold and underline.
             if j == clicked_pos:
                 style['textDecoration'] =  'underline'
                 style['fontWeight'] = 'bold'
-                
+            
             colored_text.append(
                 html.Span(token,
                           id=id,
-                          style=style
-                          )
+                          style=style,
+                          className=tok_class
+                )
             )
 
             j += 1
@@ -414,7 +429,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         return prompt, answer
     # Pressed attention button.
     else:
-        full_prompt = results_dict[str(ctx_id['index'])][0]
         answer_tokens_with_spaces = results_dict[str(ctx_id['index'])][2]
         answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
@@ -423,8 +437,10 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         sublist = [ '</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']        
         end = find_sublist_index(answer_tokens_with_spaces, sublist)
 
-        text = []
+        # Count excluding spaces.
         j = 0
+        # Loop over tokens and put the proper html elements in the list.
+        text = []
         for i, token in enumerate(answer_tokens_with_spaces):
             if token == ' ':
                 text.append(html.Span(' '))
@@ -434,11 +450,17 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
                 continue
 
             id = ''
+            tok_class = ''
+            style = {}
+            # If the token is part of the model output.
             if i > end + len(sublist):
+                # Make it clickable by giving it the proper id.
                 id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
+                style={'cursor': 'pointer'}
+                # Make it hoverable.
+                tok_class='prompt-output'
             
-            style={'cursor': 'pointer'}
-            text.append(html.Span(token, id=id, style=style))
+            text.append(html.Span(token, id=id, style=style, className=tok_class))
 
             j += 1
 

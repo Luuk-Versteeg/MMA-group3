@@ -38,7 +38,6 @@ def sent_classifier(prompt: str):
             predicted_label = "Negative"
         else:
             predicted_label = "Unknown"
-        # print("beide -", answer)
     elif 'positive' in answer:
         predicted_label = "Positive"
     elif 'negative' in answer:
@@ -46,7 +45,6 @@ def sent_classifier(prompt: str):
     else:
         # unkown
         predicted_label = "Unknown"
-        # print("else -", answer)
        
     return predicted_label, words, att_data
 
@@ -64,14 +62,20 @@ def news_classifier(prompt: str):
     answer = out[0]["generated_text"].split("<|assistant|>")[1]
     answer = answer.lower()
 
-    if 'world news' in answer:
-        predicted_label = "World"
-    elif 'sports' in answer or 'sport' in answer:
-        predicted_label = "Sports"
-    elif 'business' in answer:
-        predicted_label = "Business"
-    elif 'science' in answer or 'technology' in answer:
-        predicted_label = "Sci/Tech"
+    counts = {}
+    counts['World'] = count_occurrences('world', answer)
+    counts['Sports'] = count_occurrences('sport', answer)
+    counts['Business'] = count_occurrences('business', answer)
+    counts['Sci/Tech'] = count_occurrences('science', answer) + count_occurrences('technology', answer) + count_occurrences('Sci/Tech', answer)
+
+    max_value = max(counts.values(), default=0)
+
+    if max_value != 0:
+        keys_with_max_value = [key for key in counts.keys() if counts[key] == max_value]
+        if len(keys_with_max_value) == 1:
+            predicted_label = keys_with_max_value[0]
+        else:
+            predicted_label = "Unknown"
     else:
         predicted_label = "Unknown"
     
@@ -80,6 +84,8 @@ def news_classifier(prompt: str):
 def make_confusion_matrix(y_pred, y_true):
     return metrics.confusion_matrix(y_true, y_pred)
 
+def count_occurrences(term: str, text: str) -> int:
+    return text.count(term)
 
 def ask_model(message, model=model):
     with torch.no_grad():
