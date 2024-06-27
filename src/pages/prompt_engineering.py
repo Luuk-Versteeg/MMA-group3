@@ -134,23 +134,17 @@ prompt_engineering = html.Div(children=[
     html.P("Attention visualizer:", style={"marginBottom": "5px", 'display':'inline-block'}),
     html.Abbr("❔", title=  "Click part of the models output text to view the corresponding attention scores of the input. Green and red highlights indicate high and low attention scores respectively."),
     
-    html.Div(style={'width': '100%'}, className='box', children=[
+    html.Div(style={'width': '100%'}, children=[
         html.Div(children = [
-            html.Div("PROMPT", style={'text-align':'center', 'padding': '20px'}),
+            html.Div("Prompt", style={'text-align':'center', 'padding': '0px 20px', 'fontWeight': 'bold', 'marginTop': "10px"}),
             html.Div("No prompt tested...", id='full-prompt', 
-                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'}),
-        ]),
-        html.Div(style={
-            'width': '100%',
-            'height': '1px',
-            'margin': '10px 0',
-            'background-color':'rgb(140, 180, 255)'
-        }),
+                     style={'width': '100%', 'padding': '10px 20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'}),
+        ], className='box'),
          html.Div(children = [
-            html.Div("ANSWER", style={'text-align':'center', 'padding': '20px'}),
+            html.Div("Answer", style={'text-align':'center', 'padding': '0px 20px', 'fontWeight': 'bold', "marginTop": "10px"}),
             html.Div("No prompt tested...", id='full-answer', 
-                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'})
-        ]),
+                     style={'width': '100%', 'padding': '10px 20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'})
+        ],  className='box', style={"marginTop": "10px"}),
     ])
 ])
 
@@ -198,7 +192,6 @@ def generate_prompts(generate_clicks, data, prompt):
                     word_element = html.Span(
                         word,
                         className='synonym-token',  # CSS class for styling
-                        style={'border-bottom': '1px dashed red', 'cursor': 'help'},
                         title=f'Synonyms: {synonym_tooltip}'
                     )
                 else:
@@ -408,7 +401,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             colored_text.append(
                 html.Span(token,
                           id=id,
-                          style=style)
+                          style=style,
+                          className="prompt-output")
             )
 
             j += 1
@@ -424,7 +418,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         answer_tokens = list(filter(lambda w: w != ' ', answer_tokens_with_spaces))
 
         sublist = ['</s>', ' ', '', '\n', '<', '|', 'user', '|', '>']
-        print("answer_tokens", answer_tokens)
         start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
         sublist = [ '</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']        
         end = find_sublist_index(answer_tokens_with_spaces, sublist)
@@ -441,7 +434,7 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             
             id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
             style={'cursor': 'pointer'}
-            text.append(html.Span(token, id=id, style=style))
+            text.append(html.Span(token, id=id, style=style, className="prompt-output"))
 
             j += 1
 

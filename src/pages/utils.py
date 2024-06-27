@@ -46,7 +46,6 @@ def add_synonyms(string):
             token_element = html.Span(
                 token,
                 className='synonym-token',  # CSS class for styling
-                style={'border-bottom': '1px dashed red', 'cursor': 'help'},
                 title=f'Synonyms: {", ".join(random_synonyms)}'  # Tooltip content
             )
             syn_out.append(token_element)
