@@ -20,10 +20,12 @@ evaluation = html.Div(children=[
     html.Div([
         html.Div([
             html.Div([
-                html.P("Used dataset: AGNEWS (train)"),
-                html.P("Total number of prompts created: 10"),
-                html.P("Labels: World, Sports, Business and Sci/Tech"),
-            ]),
+                html.P([html.Span("Used dataset: ", style={"fontWeight": "bold"}), html.Span(id="eval-dataset")]),
+                html.P([html.Span("Number of samples selected: ", style={"fontWeight": "bold"}), html.Span(id="eval-num-samples")]),
+                html.P([html.Span("Total number of prompts created: ", style={"fontWeight": "bold"}), html.Span(id="eval-num-prompts")]),
+                html.P([html.Span("Description: ", style={"fontWeight": "bold"}), html.Span(id="eval-description")]),
+                html.P([html.Span("Labels: ", style={"fontWeight": "bold"}), html.Span(id="eval-labels")]),
+            ]), 
             html.Button('Run prompts', id='run-all-prompts-btn'),
         ], style={"width": "48%"}),
         html.Div(
@@ -59,6 +61,47 @@ evaluation = html.Div(children=[
         children=[]),
     ])
 
+@callback(
+    Output("eval-dataset", "children"),
+    Input("dataset-selection", "value"),
+    Input("dataset-split", "value")
+)
+def update_name(name, split):
+    if not name or not split:
+        return "no dataset selected..."
+    
+    return f"{name} ({split})"
+
+@callback(
+    Output("eval-num-samples", "children"),
+    Input("n-samples", "value")
+)
+def update_num_samples(number):
+    return f"{number}"
+
+@callback(
+    Output("eval-num-prompts", "children"),
+    Input("prompt-list", "data"),
+)
+def update_num_prompts(prompt_list):
+    if not prompt_list:
+        return "0"
+    
+    return f"{len(prompt_list)}"
+
+@callback(
+    Output("eval-labels", "children"),
+    Input("dataset-scheme", "children")
+)
+def update_labels(labels):
+    return labels
+
+@callback(
+    Output("eval-description", "children"),
+    Input("dataset-description", "children")
+)
+def update_description(desc):
+    return desc
 
 @callback(
     Output("evaluation-table", "rowData"),

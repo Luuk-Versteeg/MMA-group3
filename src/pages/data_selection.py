@@ -32,8 +32,8 @@ data_selection = html.Div(children=[
                     html.Button("Resample", id="resample")
                 ], style={"display": "flex", "gap": "10px", "alignItems": "center", "marginBottom": "0px"}),
                 html.Button("Preprocess", id="preprocess"),
-                html.P(id="dataset-description"),
-                html.P(children=f'Scheme:', id="dataset-scheme")            ]),
+                html.P([html.Span("Description: ", style={"fontWeight": "bold"}), html.Span(id="dataset-description")]),
+                html.P([html.Span("Labels: ", style={"fontWeight": "bold"}), html.Span(id="dataset-scheme")])]),
             html.Div(id="selected-sample", style={"padding": "15px 30px", "margin": "0px 20px", "marginTop": "30px", "marginBottom": "20px"}, className='box')
         ], style={"width": "48%"}),
         html.Div(dcc.Tabs(children=[
@@ -75,14 +75,14 @@ def select_dataset(name, datasets=datasets):
 )
 def update_dataset_details(dataset_name):
     split = list()
-    description = [html.Span("Description: ", style={"fontWeight": "bold"})]
-    scheme = [html.Span("Labels: ", style={"fontWeight": "bold"})]
+    description = ""
+    scheme = ""
 
     if dataset_name:
         dataset = select_dataset(dataset_name)
         split += list(dataset["data"].keys())
-        description += dataset["description"]
-        scheme += dataset["scheme"]
+        description = dataset["description"]
+        scheme = dataset["scheme"]
 
     return split, description, scheme
 
