@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import re
 
 GLUE_DOWNLOAD_URL = "hf://datasets/nyu-mll/glue/sst2/"
 TRAIN_DATA_PATH = "train-00000-of-00001.parquet"
@@ -42,3 +43,15 @@ except FileNotFoundError as e:
     glue_train.to_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     glue_validation.to_parquet(DATA_FOLDER + VALIDATION_DATA_PATH)
     # glue_test.to_parquet(DATA_FOLDER + TEST_DATA_PATH)
+
+def clean_text(text):
+    # Replace backticks
+    text = text.replace("`", "")
+    text = text.replace("[", "")
+    text = text.replace("]", "")
+    # Remove sequences of two or more dots
+    text = re.sub(r'\.{2,}', '', text)
+    return text
+
+glue_train["text"] = glue_train["text"].apply(clean_text)
+glue_validation["text"] = glue_validation["text"].apply(clean_text)

@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import re
 
 POLARITY_DOWNLOAD_URL = "hf://datasets/fancyzhx/amazon_polarity/amazon_polarity/"
 
@@ -47,3 +48,15 @@ except FileNotFoundError as e:
     print("Saving POLARITY dataset...")
     polarity_train.to_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     polarity_test.to_parquet(DATA_FOLDER + TEST_DATA_PATH)
+
+def clean_text(text):
+    # Replace backticks
+    text = text.replace("`", "")
+    text = text.replace("[", "")
+    text = text.replace("]", "")
+    # Remove sequences of two or more dots
+    text = re.sub(r'\.{2,}', '', text)
+    return text
+
+polarity_train["text"] = polarity_train["text"].apply(clean_text)
+polarity_test["text"] = polarity_test["text"].apply(clean_text)
