@@ -17,7 +17,8 @@ app.layout = html.Div(
                 
             ], style={"width": "100%"}),
     ],
-    style={"padding": "30px 40px", "maxWidth": "1100px", "margin": "auto"}
+    style={"padding": "30px 40px", "maxWidth": "1100px", "margin": "auto"},
+    className='main-div'
 )
 
 
