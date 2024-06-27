@@ -389,10 +389,11 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             style={"background-color": color}
             id={'type':'token', 'index':f"{prompt_idx}---{j}---{token}"}
 
-            if i > end:
+            if i > end + len(sublist):
                 style['cursor'] = 'pointer'
             else:
                 id = ''
+
 
             if j == clicked_pos:
                 style['textDecoration'] =  'underline'
@@ -401,8 +402,8 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             colored_text.append(
                 html.Span(token,
                           id=id,
-                          style=style,
-                          className="prompt-output")
+                          style=style
+                          )
             )
 
             j += 1
@@ -431,10 +432,13 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
             if token == '\n':
                 text.append(html.Br())
                 continue
+
+            id = ''
+            if i > end + len(sublist):
+                id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
             
-            id={'type': 'token', 'index':f"{ctx_id['index']}---{j}---{token}"}
             style={'cursor': 'pointer'}
-            text.append(html.Span(token, id=id, style=style, className="prompt-output"))
+            text.append(html.Span(token, id=id, style=style))
 
             j += 1
 
