@@ -1,5 +1,6 @@
 body {
     margin: 0;
+    background-color: #b7d8ff;
 }
 
 #carousel {
@@ -97,5 +98,12 @@ button:active {
 
 button:disabled {
     background-color: rgb(8, 74, 197);
-  }
+}
   
+.main-div 
+{
+    border-left:2px solid #5f8fff; 
+    border-right:2px solid #5f8fff;
+    background-color:white;
+    box-shadow:0px 0px 10px 5px #91b2ff;
+}
