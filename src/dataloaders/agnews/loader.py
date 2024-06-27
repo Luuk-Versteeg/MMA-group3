@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import numpy as np
 
 AGNEWS_DOWNLOAD_URL = "hf://datasets/fancyzhx/ag_news/data/"
 TRAIN_DATA_PATH = "train-00000-of-00001.parquet"
@@ -14,9 +15,12 @@ labels = {
     3: "Sci/Tech"
 }
 
+discard = ["#", "&"]
+
 try:
-    agnews_train = pd.read_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
-    agnews_test = pd.read_parquet(DATA_FOLDER + TEST_DATA_PATH)
+    agnews_train = pd.read_parquet(DATA_FOLDER + TRAIN_DATA_PATH, engine="pyarrow")
+    agnews_test = pd.read_parquet(DATA_FOLDER + TEST_DATA_PATH, engine="pyarrow")
+
 
 except FileNotFoundError as e:
     print("Downloading AGNEWS dataset...")
@@ -29,3 +33,21 @@ except FileNotFoundError as e:
     print("Saving AGNEWS dataset...")
     agnews_train.to_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     agnews_test.to_parquet(DATA_FOLDER + TEST_DATA_PATH)
+
+discard = ["#", "&"]
+
+agnews_train = agnews_train[~agnews_train.text.str.contains('|'.join(discard))]
+agnews_test = agnews_test[~agnews_test.text.str.contains('|'.join(discard))]
+
+agnews_train["text"] = np.where(
+    agnews_train["text"].str.contains(r'\\'),
+    agnews_train["text"].str.replace("\\", " "), 
+    agnews_train["text"]
+)
+agnews_test["text"] = np.where(
+    agnews_test["text"].str.contains(r'\\'), 
+    agnews_test["text"].str.replace("\\", " "), 
+    agnews_test["text"]
+)
+
+# import pdb; pdb.set_trace()
