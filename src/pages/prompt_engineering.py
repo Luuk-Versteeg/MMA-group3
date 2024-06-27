@@ -129,7 +129,6 @@ prompt_engineering = html.Div(children=[
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '10px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
 
     html.Div(id='tested-prompts-container', children=[
-        #html.Div(children='test prompt')
     ], style={'width':'100%', 'maxHeight': '300px', 'overflowY': 'scroll', 'display': 'flex', 'gap': '15px', 'marginTop': '20px', 'flexWrap': 'wrap', 'justifyContent': 'center'}),
     
     html.P("Attention visualizer:", style={"marginBottom": "5px", 'display':'inline-block'}),
@@ -139,18 +138,18 @@ prompt_engineering = html.Div(children=[
         html.Div(children = [
             html.Div("PROMPT", style={'text-align':'center', 'padding': '20px'}),
             html.Div("No prompt tested...", id='full-prompt', 
-                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'}),
+                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'}),
         ]),
         html.Div(style={
             'width': '100%',
             'height': '1px',
-            'background-color': '#000',  # Black color for the line
-            'margin': '10px 0'  # Adjust margin as needed
+            'margin': '10px 0',
+            'background-color':'rgb(140, 180, 255)'
         }),
          html.Div(children = [
             html.Div("ANSWER", style={'text-align':'center', 'padding': '20px'}),
             html.Div("No prompt tested...", id='full-answer', 
-                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word'})
+                     style={'width': '100%', 'padding': '20px', 'overflow': 'hidden', 'whiteSpace': 'normal', 'wordWrap': 'break-word', 'box-sizing': 'border-box'})
         ]),
     ])
 ])
@@ -206,9 +205,11 @@ def generate_prompts(generate_clicks, data, prompt):
                     word_element = word
 
                 prompt_lines.append(word_element)
-                prompt_lines.append(' ')  # Add space between words
+                # Add space between words
+                prompt_lines.append(' ')  
             prompt_lines.append(html.Br())
-        prompt_lines = prompt_lines[:-1]  # Remove the last html.Br()
+        # Remove the last html.Br()
+        prompt_lines = prompt_lines[:-1] 
 
         # Create a div for the generated prompt
         generated_prompts.append(html.Div(
@@ -241,7 +242,6 @@ def clear_progressfile():
 clear_progressfile()
 
 @callback(
-    # Output('tested-prompts-container', 'children'),
     Output('generated-prompts-container', 'children', allow_duplicate=True),
     Output('results-dict','data'),
     Input('button-test-prompts', 'n_clicks'),
@@ -311,8 +311,8 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
 
         colored_prompt_divs.append(html.Div(
             id={'type': 'generated-prompt', 'index': int(idx)}, 
-            children=prompt_lines + [html.Button('Attention', id={'type': 'prompt-attention-button', 'index': int(idx)})],
-            style={'border':'1px solid #000', 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color}))
+            children=prompt_lines + [html.Button('Attention', id={'type': 'prompt-attention-button', 'index': int(idx)}, style={'position':'absolute', 'bottom':'5px', 'left': '50%', 'transform': 'translateX(-50%)'})],
+            style={'border':'1px solid #000', 'width':200, 'padding': 15, 'boxSizing': 'border-box', 'display':'inline-block', 'background-color':color, 'position': 'relative', 'paddingBottom': '45px'  }))  
 
     return colored_prompt_divs, results_dict
 
@@ -428,8 +428,6 @@ def show_answer(prompt_clicks, token_clicks, results_dict, prompt, answer):
         start = find_sublist_index(answer_tokens_with_spaces, sublist) + len(sublist)
         sublist = [ '</s>', ' ', '', '\n', '<', '|', 'ass', 'istant', '|', '>']        
         end = find_sublist_index(answer_tokens_with_spaces, sublist)
-
-        #text = []
 
         text = []
         j = 0
@@ -547,7 +545,6 @@ def update_variant_dict(values, remove_variant, remove_variable, selected_tab, a
     # Change the value of a variant (also in the store).
     elif ctx_id['type'] == 'variant-input':
         input_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        #input_index = eval(input_id)['index']
         changed_value = ctx.triggered[0]['value']
 
         all_variants[selected_tab][str(ctx_id['index'])] = changed_value
