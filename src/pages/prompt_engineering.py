@@ -263,15 +263,15 @@ def test_prompts(test_button, dataset_name, true_label, generated_prompts, text)
 
     if snellius:
         with ThreadPoolExecutor(max_workers=2) as executor:  # Adjust max_workers based on your hardware
-            full_prompt = prompt.format(text=text)
+            # full_prompt = prompt.format(text=text)
 
-            future_to_prompt = {executor.submit(classifier, full_prompt): prompt for prompt in generated_prompts}
+            future_to_prompt = {executor.submit(classifier, prompt.format(text=text)): prompt for prompt in generated_prompts}
             for i, future in tqdm(as_completed(enumerate(future_to_prompt)), total=n_total):
                 label, words, att_data = future.result()
                 pred_labels.append(label)
                 pred_words.append(words)
                 pred_attentions.append(att_data)
-                full_prompts.append(full_prompt)
+                full_prompts.append(prompt.format(text=text))
                 update_progressfile(((i+1)/n_total)*100)
     else:
         for i, prompt in tqdm(enumerate(generated_prompts)):
