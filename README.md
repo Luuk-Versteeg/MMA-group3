@@ -53,3 +53,19 @@ module load Anaconda3/2022.05
 ```
 
 Follow the steps at "Setup Locally" and "Run" to start the dashboard.
+
+### Screenshots
+
+#### Data Selection
+
+![screenshot](images/screenshot1.png)
+
+#### Prompt Engineering
+
+![screenshot](images/screenshot2.png)
+![screenshot](images/screenshot3.png)
+
+#### Prompt Evaluation
+
+![screenshot](images/screenshot4.png)
+![screenshot](images/screenshot5.png)
