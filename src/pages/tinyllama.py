@@ -66,7 +66,7 @@ def news_classifier(prompt: str):
     counts['World'] = count_occurrences('world', answer)
     counts['Sports'] = count_occurrences('sport', answer)
     counts['Business'] = count_occurrences('business', answer)
-    counts['Sci/Tech'] = count_occurrences('science', answer) + count_occurrences('technology', answer) + count_occurrences('Sci/Tech', answer)
+    counts['Sci/Tech'] = count_occurrences('science', answer) + count_occurrences('technology', answer) + count_occurrences('sci/tech', answer)
 
     max_value = max(counts.values(), default=0)
 
