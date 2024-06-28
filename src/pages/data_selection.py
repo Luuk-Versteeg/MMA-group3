@@ -8,7 +8,7 @@ import plotly
 import random
 from collections import Counter
 
-from .utils import add_synonyms, filter_text, preprocess_text
+from .utils import add_synonyms, filter_text
 
 from widgets import histogram
 from dataloaders.load_data import datasets
@@ -96,7 +96,7 @@ def update_dataset_details(dataset_name):
     Input("preprocess", "n_clicks"),
     State("selected-dataset", "data")
 )
-def update_selected_dataset(dataset_name, dataset_split, n_samples, resample_clicks, preprocess_clicks, current_data):
+def update_selected_dataset(dataset_name, dataset_split, n_samples, resample_clicks, preprocess_clicks, current_data, datasets=datasets):
     ctx = callback_context
     if not dataset_name or not dataset_split:
         return
@@ -109,7 +109,12 @@ def update_selected_dataset(dataset_name, dataset_split, n_samples, resample_cli
     if ctx.triggered and 'preprocess' in ctx.triggered[0]['prop_id']:
         if current_data:
             samples = pd.DataFrame.from_dict(current_data)
-            samples['text'] = samples['text'].apply(preprocess_text)
+
+            # Preprocess using function defined per dataset
+            dataset = select_dataset(dataset_name)
+            preprocess_function = dataset["preprocess"]
+            samples = preprocess_function(samples)
+            # samples['text'] = samples['text'].apply(preprocess_text)
         else:
             return
     else:

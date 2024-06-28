@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import numpy as np
 
 
 AGNEWS_DOWNLOAD_URL = "hf://datasets/fancyzhx/ag_news/data/"
@@ -31,3 +32,25 @@ except FileNotFoundError as e:
     print("Saving AGNEWS dataset...")
     agnews_train.to_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     agnews_test.to_parquet(DATA_FOLDER + TEST_DATA_PATH)
+
+
+# Discards all rows containing these charaters.
+discard = ["#", "&"]
+
+agnews_train = agnews_train[~agnews_train.text.str.contains('|'.join(discard))]
+
+# Replace certain characters with spaces
+agnews_train["text"] = np.where(
+    agnews_train["text"].str.contains(r'\\'),
+    agnews_train["text"].str.replace("\\", " "), 
+    agnews_train["text"]
+)
+
+agnews_test = agnews_test[~agnews_test.text.str.contains('|'.join(discard))]
+
+# Replace certain characters with spaces
+agnews_test["text"] = np.where(
+    agnews_test["text"].str.contains(r'\\'),
+    agnews_test["text"].str.replace("\\", " "), 
+    agnews_test["text"]
+)
