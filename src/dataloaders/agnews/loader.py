@@ -1,7 +1,6 @@
 import pandas as pd
 from pathlib import Path
-import numpy as np
-import re
+
 
 AGNEWS_DOWNLOAD_URL = "hf://datasets/fancyzhx/ag_news/data/"
 TRAIN_DATA_PATH = "train-00000-of-00001.parquet"
@@ -32,33 +31,3 @@ except FileNotFoundError as e:
     print("Saving AGNEWS dataset...")
     agnews_train.to_parquet(DATA_FOLDER + TRAIN_DATA_PATH)
     agnews_test.to_parquet(DATA_FOLDER + TEST_DATA_PATH)
-
-# Discards all rows containing these charaters.
-discard = ["#", "&"]
-
-agnews_train = agnews_train[~agnews_train.text.str.contains('|'.join(discard))]
-agnews_test = agnews_test[~agnews_test.text.str.contains('|'.join(discard))]
-
-# Replace certain characters with spaces
-agnews_train["text"] = np.where(
-    agnews_train["text"].str.contains(r'\\'),
-    agnews_train["text"].str.replace("\\", " "), 
-    agnews_train["text"]
-)
-agnews_test["text"] = np.where(
-    agnews_test["text"].str.contains(r'\\'), 
-    agnews_test["text"].str.replace("\\", " "), 
-    agnews_test["text"]
-)
-
-def clean_text(text):
-    # Replace backticks
-    text = text.replace("`", "")
-    # Remove sequences of two or more dots
-    text = re.sub(r'\.{2,}', '', text)
-    return text
-
-agnews_train["text"] = agnews_train["text"].apply(clean_text)
-agnews_test["text"] = agnews_test["text"].apply(clean_text)
-
-# import pdb; pdb.set_trace()
